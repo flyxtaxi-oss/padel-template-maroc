@@ -48,9 +48,9 @@ export default function Hero({ locale }: { locale: string }) {
 
           {/* Luxury Headings */}
           <h1 className="font-heading text-6xl sm:text-7xl xl:text-8.5xl font-black leading-[0.9] tracking-tighter mb-6 text-white uppercase">
-            <span className="block text-white/90">Golden</span>
-            <span className="block text-gold">Padel</span>
-            <span className="block text-white/90">Club</span>
+            <span className="block text-white/95">Golden</span>
+            <span className="block font-quote italic text-gold normal-case font-medium tracking-wide">Padel</span>
+            <span className="block text-white/95">Club</span>
           </h1>
 
           {/* Subheading/Tagline */}
@@ -90,8 +90,8 @@ export default function Hero({ locale }: { locale: string }) {
               { value: '09h - 00h', label: 'Ouvert 7j/7' }
             ].map((stat, i) => (
               <div key={i} className="flex flex-col">
-                <span className="font-heading text-xl sm:text-2xl font-black text-white">{stat.value}</span>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-white/35 mt-1">{stat.label}</span>
+                <span className="font-mono text-xl sm:text-2xl font-black text-white">{stat.value}</span>
+                <span className="text-[9px] uppercase font-bold tracking-widest text-white/35 mt-1">{stat.label}</span>
               </div>
             ))}
           </div>

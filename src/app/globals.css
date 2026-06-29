@@ -2,7 +2,7 @@
 
 @theme {
   /* Tailwind v4 theme extensions */
-  --color-background: #060913;
+  --color-background: #000000;
   --color-foreground: #f8fafc;
   --color-primary: var(--primary, #090e1a);
   --color-secondary: var(--secondary, #d4af37);
@@ -10,6 +10,8 @@
   
   --font-heading: var(--font-outfit), sans-serif;
   --font-body: var(--font-inter), sans-serif;
+  --font-quote: var(--font-playfair), serif;
+  --font-mono: var(--font-mono), monospace;
   
   --animate-float: float-slow 8s ease-in-out infinite;
   --animate-float-delayed: float-delayed 10s ease-in-out infinite;
@@ -43,6 +45,8 @@
   --accent: #1062ae;
   --font-heading: var(--font-outfit), sans-serif;
   --font-body: var(--font-inter), sans-serif;
+  --font-quote: var(--font-playfair), serif;
+  --font-mono: var(--font-mono), monospace;
 }
 
 * {
@@ -57,7 +61,7 @@ html {
 
 body {
   font-family: var(--font-body);
-  background-color: #060913;
+  background-color: #000000;
   color: #f8fafc;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -65,7 +69,7 @@ body {
   position: relative;
 }
 
-/* Background grid overlay */
+/* Background grid overlay - inspired by Motion.so */
 body::before {
   content: "";
   position: absolute;
@@ -73,14 +77,14 @@ body::before {
   background-image: 
     linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-  background-size: 60px 60px;
+  background-size: 50px 50px;
   pointer-events: none;
   z-index: 0;
 }
 
 /* ─── SCROLLBAR ─────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #060913; }
+::-webkit-scrollbar-track { background: #000000; }
 ::-webkit-scrollbar-thumb { 
   background: linear-gradient(180deg, var(--secondary), var(--accent)); 
   border-radius: 3px; 
@@ -96,6 +100,15 @@ body::before {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* Iridescent spectrum gradient - inspired by Motion.so */
+.text-iridescent {
+  background: linear-gradient(135deg, #fff 20%, #d4af37 50%, #38bdf8 80%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 40px rgba(56, 189, 248, 0.15);
 }
 
 .text-blue-glow {
@@ -120,13 +133,35 @@ body::before {
   transform: translateY(-4px);
 }
 
-/* Dark glass */
+/* Dark glass - inspired by Motion.so */
 .glass-dark {
-  background: rgba(6, 9, 19, 0.7);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.8);
+  background: rgba(6, 9, 19, 0.5);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.8);
+}
+
+/* Liquid Glass blobs - inspired by Motion.so */
+.liquid-blob {
+  position: absolute;
+  width: 450px;
+  height: 450px;
+  border-radius: 50%;
+  filter: blur(140px);
+  mix-blend-mode: screen;
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+  transition: all 1s ease-in-out;
+}
+
+.liquid-blue {
+  background: radial-gradient(circle, #38bdf8 0%, transparent 70%);
+}
+
+.liquid-gold {
+  background: radial-gradient(circle, #d4af37 0%, transparent 70%);
 }
 
 /* Gold borders */
@@ -169,7 +204,7 @@ body::before {
 .btn-premium {
   position: relative;
   background: linear-gradient(135deg, #d4af37, #f59e0b);
-  color: #060913;
+  color: #000000;
   font-weight: 700;
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -201,9 +236,9 @@ body::before {
 
 /* Carousel images overlay */
 .overlay-gradient {
-  background: linear-gradient(to top, #060913 0%, rgba(6, 9, 19, 0.8) 40%, transparent 100%);
+  background: linear-gradient(to top, #000000 0%, rgba(0, 0, 0, 0.8) 40%, transparent 100%);
 }
 
 .card-overlay {
-  background: linear-gradient(to top, rgba(6, 9, 19, 0.95) 0%, rgba(6, 9, 19, 0.4) 60%, transparent 100%);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%);
 }

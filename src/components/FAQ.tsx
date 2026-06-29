@@ -16,7 +16,7 @@ export default function FAQ({ locale }: { locale: string }) {
             FAQ
           </div>
           <h2 className="font-heading text-4xl sm:text-5xl font-black text-white uppercase">
-            Questions <span className="text-gold">fréquentes</span>
+            Questions <span className="font-quote italic text-gold normal-case font-medium tracking-wide">fréquentes</span>
           </h2>
           <div className="divider mx-auto mt-4" />
         </div>

@@ -22,7 +22,7 @@ export default function Reviews({ locale }: { locale: string }) {
               Témoignages
             </div>
             <h2 className="font-heading text-4xl sm:text-5xl font-black text-white uppercase leading-none">
-              Ils adorent<br /><span className="text-gold">le club.</span>
+              Ils adorent<br /><span className="font-quote italic text-gold normal-case font-medium tracking-wide">le club.</span>
             </h2>
           </div>
           {googleReviewUrl && (
@@ -47,7 +47,7 @@ export default function Reviews({ locale }: { locale: string }) {
             <div className="absolute inset-0 bg-yellow-500/5 filter blur-[40px] pointer-events-none" />
             
             <span className="text-white/40 text-[10px] font-black uppercase tracking-widest mb-2">Note Globale</span>
-            <div className="font-heading text-8xl font-black text-white mb-2 leading-none">5.0</div>
+            <div className="font-mono text-8xl font-black text-white mb-2 leading-none">5.0</div>
             <div className="flex gap-1.5 mb-4">
               {[...Array(5)].map((_, i) => <Star key={i} className="w-6 h-6 fill-yellow-400 text-yellow-400" />)}
             </div>

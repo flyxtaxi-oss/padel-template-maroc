@@ -31,7 +31,7 @@ export default function About({ locale }: { locale: string }) {
 
             {/* Floating gold stamp badge */}
             <div className="absolute -bottom-6 -right-6 glass-dark rounded-2xl p-5 border border-yellow-500/20 z-25 shadow-xl transition-transform duration-500 hover:scale-105">
-              <div className="text-gold font-heading font-black text-4xl leading-none">{about.stats.established}</div>
+              <div className="text-gold font-mono font-black text-4xl leading-none">{about.stats.established}</div>
               <div className="text-white/40 text-[9px] uppercase tracking-widest font-black mt-1.5">Fondation du club</div>
             </div>
           </div>
@@ -45,7 +45,7 @@ export default function About({ locale }: { locale: string }) {
             
             {/* Title */}
             <h2 className="font-heading text-4xl sm:text-5xl font-black text-white mb-6 leading-tight uppercase">
-              Le padel, <span className="text-gold">autrement.</span>
+              Le padel, <span className="font-quote italic text-gold normal-case font-medium tracking-wide">autrement.</span>
             </h2>
             <div className="divider mb-8" />
             
@@ -62,7 +62,7 @@ export default function About({ locale }: { locale: string }) {
                 { value: '21°C', label: 'Régulation Temp.' },
               ].map((s, i) => (
                 <div key={i} className="glass rounded-2xl p-5 text-center border border-white/5 transition-all duration-300 hover:border-yellow-500/20">
-                  <div className="font-heading text-2xl sm:text-3xl font-black text-gold">{s.value}</div>
+                  <div className="font-mono text-2xl sm:text-3xl font-black text-gold">{s.value}</div>
                   <div className="text-white/35 text-[9px] uppercase tracking-widest font-bold mt-1.5">{s.label}</div>
                 </div>
               ))}
