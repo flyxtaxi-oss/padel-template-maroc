@@ -5,9 +5,9 @@ export type Court = {
 };
 
 export type Pricing = {
-  label: string;
+  label: Record<string, string>; // e.g. { fr: 'Heures Creuses', es: 'Horas Valle' }
   price: number;
-  duration: string;
+  duration: string; // e.g. '60 min'
 };
 
 export type Review = {
@@ -27,14 +27,31 @@ export type Contact = {
 };
 
 export type OpeningHours = {
-  [day: string]: string;
+  [day: string]: string; // e.g. '08:00 - 23:00'
 };
 
+export type FAQItem = {
+  question: Record<string, string>;
+  answer: Record<string, string>;
+};
+
+export type EventItem = {
+  id: string;
+  title: Record<string, string>;
+  date: string; // ISO date string or recognizable format
+  format: string; // e.g., 'P250', 'P500'
+  prizeMAD: number;
+  description: Record<string, string>;
+  imagePath?: string;
+};
+
+export type LocalizedString = Record<string, string>;
+
 export type ClubConfig = {
-  slug: string; // Used for assets folder
+  slug: string;
   name: string;
-  tagline: string;
-  logoPath: string; // relative to /public/clubs/{slug}/
+  tagline: LocalizedString;
+  logoPath: string;
   brandColors: {
     primary: string;
     secondary: string;
@@ -43,10 +60,10 @@ export type ClubConfig = {
   hero: {
     mediaPath: string;
     isVideo: boolean;
-    pitch: string;
+    pitch: LocalizedString;
   };
   about: {
-    text: string;
+    text: LocalizedString;
     stats: {
       courts: number;
       players: string;
@@ -56,97 +73,140 @@ export type ClubConfig = {
   courts: Court[];
   pricing: Pricing[];
   openingHours: OpeningHours;
-  gallery: string[]; // Paths relative to /public/clubs/{slug}/
+  gallery: string[];
   googleReviews: Review[];
+  googleReviewUrl?: string;
   contact: Contact;
+  
+  // Booking Module
+  bookingMode: 'whatsapp' | 'supabase' | 'external';
+  slotDurationMinutes: number;
+  bookedSlots: string[]; // e.g., ["2026-06-28T10:00"]
   reservation: {
-    type: 'whatsapp' | 'phone' | 'external';
-    value: string; // Phone number or URL
+    value: string; // Phone number or external URL
   };
-  enableArabic?: boolean;
-  ar?: {
-    tagline: string;
-    pitch: string;
-    aboutText: string;
-    pricingLabels: Record<string, string>; // map english/french label to arabic
-  };
+
+  // SEO & AEO
+  faq: FAQItem[];
+  events: EventItem[];
+
+  // i18n
+  locales: string[]; // e.g. ['fr', 'ar', 'es']
+  defaultLocale: string;
 };
 
-const casablancaConfig: ClubConfig = {
-  slug: 'casa-padel',
-  name: 'Casa Padel Club',
-  tagline: 'L\'expérience padel premium à Casablanca',
-  logoPath: '/logo.png',
+const goldenConfig: ClubConfig = {
+  slug: 'golden-padel-tanger',
+  name: 'Golden Padel Club',
+  tagline: {
+    fr: 'Votre club de padel premium à Tanger',
+    ar: 'نادي البادل الفاخر الخاص بك في طنجة',
+    es: 'Tu club de pádel premium en Tánger',
+  },
+  logoPath: '', // Laisser vide si pas de logo pour afficher le nom stylisé
   brandColors: {
-    primary: '#0F172A', // Slate 900
-    secondary: '#14B8A6', // Teal 500
-    accent: '#F59E0B', // Amber 500
+    primary: '#090e1a', // Premium Deep Midnight Navy
+    secondary: '#d4af37', // Luxurious Gold
+    accent: '#1062ae', // Vibrant Padel Blue
   },
   hero: {
-    mediaPath: '/hero.jpg',
+    mediaPath: '/clubs/golden/1.jpg',
     isVideo: false,
-    pitch: 'Rejoignez le club de padel le plus exclusif de Casablanca. Des installations de pointe pour tous les niveaux.',
+    pitch: {
+      fr: 'Découvrez des installations modernes et une ambiance chaleureuse au cœur de Tanger. Le point de rencontre des passionnés de padel.',
+      ar: 'اكتشف المرافق الحديثة والجو الدافئ في قلب طنجة. نقطة التقاء عشاق البادل.',
+      es: 'Descubre instalaciones modernas y un ambiente acogedor en el corazón de Tánger. El punto de encuentro para los apasionados del pádel.',
+    },
   },
   about: {
-    text: 'Casa Padel Club a été fondé par des passionnés pour des passionnés. Nous offrons des terrains panoramiques de dernière génération, un club house accueillant et un pro-shop complet. Que vous soyez débutant ou joueur confirmé, vous trouverez votre place chez nous.',
+    text: {
+      fr: 'Golden Padel Club est la référence du padel à Tanger. Idéalement situé près du Marjane Route de Rabat, notre club offre des terrains indoor de dernière génération pour jouer toute l\'année dans des conditions optimales.',
+      ar: 'جولدن بادل كلوب هو المرجع للبادل في طنجة. يقع في موقع مثالي بالقرب من مرجان طريق الرباط، يقدم نادينا ملاعب داخلية من أحدث طراز للعب على مدار السنة في ظروف مثالية.',
+      es: 'Golden Padel Club es la referencia del pádel en Tánger. Con una ubicación ideal cerca del Marjane Route de Rabat, nuestro club ofrece pistas cubiertas de última generación para jugar todo el año en óptimas condiciones.',
+    },
     stats: {
-      courts: 6,
-      players: '2000+',
+      courts: 4,
+      players: '500+',
       established: '2023',
     }
   },
   courts: [
     { id: 'c1', type: 'indoor', surface: 'Mondo Supercourt' },
     { id: 'c2', type: 'indoor', surface: 'Mondo Supercourt' },
-    { id: 'c3', type: 'outdoor', surface: 'Gazon synthétique' },
-    { id: 'c4', type: 'outdoor', surface: 'Gazon synthétique' },
-    { id: 'c5', type: 'outdoor', surface: 'Gazon synthétique' },
-    { id: 'c6', type: 'outdoor', surface: 'Gazon synthétique' },
+    { id: 'c3', type: 'indoor', surface: 'Mondo Supercourt' },
+    { id: 'c4', type: 'indoor', surface: 'Mondo Supercourt' },
   ],
   pricing: [
-    { label: 'Heures Creuses (8h - 17h)', price: 200, duration: '60 min' },
-    { label: 'Heures Pleines (17h - 23h)', price: 300, duration: '60 min' },
-    { label: 'Location de raquette', price: 50, duration: 'partie' },
+    { 
+      label: { fr: 'Location Terrain (90 min)', ar: 'إيجار ملعب (90 دقيقة)', es: 'Alquiler Pista (90 min)' }, 
+      price: 240, 
+      duration: '90 min' 
+    },
+    { 
+      label: { fr: 'Location Raquette', ar: 'تأجير مضرب', es: 'Alquiler Pala' }, 
+      price: 30, 
+      duration: 'partie' 
+    },
   ],
   openingHours: {
-    'Lundi - Vendredi': '08:00 - 23:00',
-    'Samedi - Dimanche': '07:00 - 00:00',
+    'Tous les jours': '09:00 - 00:00',
   },
   gallery: [
-    '/gallery-1.jpg',
-    '/gallery-2.jpg',
-    '/gallery-3.jpg',
-    '/gallery-4.jpg',
+    '/clubs/golden/2.jpg',
+    '/clubs/golden/3.jpg',
+    '/clubs/golden/4.jpg',
+    '/clubs/golden/5.jpg',
+    '/clubs/golden/6.jpg',
+    '/clubs/golden/7.jpg',
+    '/clubs/golden/8.jpg',
   ],
   googleReviews: [
-    { author: 'Youssef B.', rating: 5, text: 'Superbe club, les terrains sont en parfait état. Le staff est très accueillant.' },
-    { author: 'Sara M.', rating: 5, text: 'Mon club de padel préféré à Casa. L\'ambiance après-match au café est top !' },
-    { author: 'Karim T.', rating: 4, text: 'Très bonnes installations. Pensez à réserver à l\'avance car c\'est souvent plein.' },
+    { author: 'Ahmed K.', rating: 5, text: 'Le meilleur club indoor de Tanger. Ambiance au top et terrains parfaits.' },
+    { author: 'Sofia B.', rating: 5, text: 'Personnel très accueillant, les vestiaires sont propres.' },
   ],
+  googleReviewUrl: 'https://g.page/r/golden-padel-tanger/review',
   contact: {
     phone: '+212600000000',
     whatsapp: '+212600000000',
-    instagram: 'https://instagram.com/casapadel',
-    address: 'Quartier Californie, Casablanca, Maroc',
-    googleMapsEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d106376.56000721752!2d-7.669394546419702!3d33.57240323334237!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xda7d28473256eb7%3A0x2218a562828b8162!2sCasablanca!5e0!3m2!1sfr!2sma!4v1717200000000!5m2!1sfr!2sma',
-    lat: 33.5731,
-    lng: -7.5898,
+    instagram: 'https://instagram.com/goldenpadelclubtanger',
+    address: 'Marjane Route de Rabat, Tanger, Maroc',
+    googleMapsEmbedUrl: '', // To be filled if needed
+    lat: 35.7336,
+    lng: -5.8336, // Approximate for Route de Rabat, Tanger
   },
+  
+  // Booking
+  bookingMode: 'whatsapp',
+  slotDurationMinutes: 90,
+  bookedSlots: [],
   reservation: {
-    type: 'whatsapp',
     value: '+212600000000',
   },
-  enableArabic: true,
-  ar: {
-    tagline: 'تجربة بادل مميزة في الدار البيضاء',
-    pitch: 'انضم إلى نادي البادل الأكثر تميزًا في الدار البيضاء. مرافق متطورة لجميع المستويات.',
-    aboutText: 'تم تأسيس نادي كازا بادل من قبل عشاق اللعبة. نحن نقدم ملاعب بانورامية من الجيل الأحدث، ونادي ترحيبي ومتجر متكامل. سواء كنت مبتدئًا أو لاعبًا متمرسًا، ستجد مكانك معنا.',
-    pricingLabels: {
-      'Heures Creuses (8h - 17h)': 'أوقات الفراغ (8 صباحًا - 5 مساءً)',
-      'Heures Pleines (17h - 23h)': 'أوقات الذروة (5 مساءً - 11 مساءً)',
-      'Location de raquette': 'تأجير مضرب',
+
+  // FAQ
+  faq: [
+    {
+      question: { fr: 'Où se trouve le club exactement ?', ar: 'أين يقع النادي بالضبط؟', es: '¿Dónde está el club exactamente?' },
+      answer: { 
+        fr: 'Nous sommes situés juste à côté du Marjane Route de Rabat à Tanger.',
+        ar: 'نحن موجودون بجوار مرجان طريق الرباط في طنجة.',
+        es: 'Estamos ubicados justo al lado del Marjane Route de Rabat en Tánger.'
+      }
+    },
+    {
+      question: { fr: 'Faut-il réserver à l\'avance ?', ar: 'هل يجب الحجز مسبقًا؟', es: '¿Hay que reservar con antelación?' },
+      answer: { 
+        fr: 'Oui, nous vous conseillons de réserver votre terrain au moins 24h à l\'avance via notre site ou par WhatsApp.',
+        ar: 'نعم، ننصحك بحجز ملعبك قبل 24 ساعة على الأقل عبر موقعنا أو عبر الواتساب.',
+        es: 'Sí, te aconsejamos reservar tu pista con al menos 24h de antelación a través de nuestra web o por WhatsApp.'
+      }
     }
-  }
+  ],
+
+  events: [],
+
+  locales: ['fr', 'ar', 'es'],
+  defaultLocale: 'fr',
 };
 
-export default casablancaConfig;
+export default goldenConfig;

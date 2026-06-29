@@ -3,20 +3,32 @@ import { ClubConfig } from './club.config';
 const marrakechConfig: ClubConfig = {
   slug: 'marrakech-padel',
   name: 'Marrakech Padel Arena',
-  tagline: 'Le padel au cœur de la ville ocre',
+  tagline: {
+    fr: 'Le padel au cœur de la ville ocre',
+    es: 'El pádel en el corazón de la ciudad ocre',
+    ar: 'البادل في قلب المدينة الحمراء',
+  },
   logoPath: '/logo.png',
   brandColors: {
-    primary: '#451A03', // Orange/Brown dark
-    secondary: '#D97706', // Amber 600
-    accent: '#10B981', // Emerald 500
+    primary: '#451A03', 
+    secondary: '#D97706', 
+    accent: '#10B981', 
   },
   hero: {
     mediaPath: '/hero.jpg',
     isVideo: false,
-    pitch: 'Jouez au padel avec vue sur les montagnes de l\'Atlas. Des courts de classe mondiale et une ambiance unique.',
+    pitch: {
+      fr: 'Jouez au padel avec vue sur les montagnes de l\'Atlas. Des courts de classe mondiale et une ambiance unique.',
+      es: 'Juega al pádel con vistas a las montañas del Atlas. Pistas de clase mundial y un ambiente único.',
+      ar: 'العب البادل مع إطلالة على جبال الأطلس. ملاعب عالمية المستوى وجو فريد.',
+    },
   },
   about: {
-    text: 'Marrakech Padel Arena est le nouveau lieu de rendez-vous des sportifs de la ville ocre. Avec nos 4 courts extérieurs dernière génération et notre restaurant tapas, venez vivre l\'expérience padel espagnole au Maroc.',
+    text: {
+      fr: 'Marrakech Padel Arena est le nouveau lieu de rendez-vous des sportifs de la ville ocre. Avec nos 4 courts extérieurs dernière génération et notre restaurant tapas, venez vivre l\'expérience padel espagnole au Maroc.',
+      es: 'Marrakech Padel Arena es el nuevo lugar de encuentro para los deportistas de la ciudad ocre. Con nuestras 4 pistas exteriores de última generación y nuestro restaurante de tapas, ven a vivir la experiencia de pádel español en Marruecos.',
+      ar: 'ماراكش بادل أرينا هو المكان الجديد لالتقاء الرياضيين في المدينة الحمراء. مع 4 ملاعب خارجية من أحدث طراز ومطعم تاباس، تعال وعش تجربة البادل الإسبانية في المغرب.',
+    },
     stats: {
       courts: 4,
       players: '1000+',
@@ -30,8 +42,7 @@ const marrakechConfig: ClubConfig = {
     { id: 'c4', type: 'outdoor', surface: 'Mondo Supercourt' },
   ],
   pricing: [
-    { label: 'Tarif Unique', price: 250, duration: '90 min' },
-    { label: 'Abonnement Mensuel', price: 1500, duration: 'Illimité (heures creuses)' },
+    { label: { fr: 'Tarif Unique', es: 'Tarifa Única', ar: 'سعر موحد' }, price: 250, duration: '90 min' },
   ],
   openingHours: {
     'Tous les jours': '07:00 - 00:00',
@@ -41,10 +52,8 @@ const marrakechConfig: ClubConfig = {
     '/gallery-2.jpg',
     '/gallery-3.jpg',
   ],
-  googleReviews: [
-    { author: 'Mehdi K.', rating: 5, text: 'Les meilleurs terrains de la ville. La vue au coucher du soleil est incroyable.' },
-    { author: 'Chloé R.', rating: 5, text: 'Club magnifique, propre, et le gérant est super sympa. On reviendra !' },
-  ],
+  googleReviews: [],
+  googleReviewUrl: 'https://g.page/r/marrakech-padel/review',
   contact: {
     phone: '+212600000001',
     whatsapp: '+212600000001',
@@ -54,11 +63,21 @@ const marrakechConfig: ClubConfig = {
     lat: 31.6295,
     lng: -7.9811,
   },
+  
+  // Booking
+  bookingMode: 'external',
+  slotDurationMinutes: 90,
+  bookedSlots: [],
   reservation: {
-    type: 'external',
     value: 'https://playtomic.io/marrakech-padel-arena',
   },
-  enableArabic: false, // Disabled for this club
+
+  // SEO & AEO
+  faq: [],
+  events: [],
+
+  locales: ['fr', 'en'], // This club supports FR and EN (for tourists)
+  defaultLocale: 'fr',
 };
 
 export default marrakechConfig;
