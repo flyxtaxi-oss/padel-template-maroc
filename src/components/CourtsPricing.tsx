@@ -17,7 +17,7 @@ export default function CourtsPricing({ locale }: { locale: string }) {
   ];
 
   return (
-    <section id="courts" className="py-32 bg-[#060913] relative overflow-hidden">
+    <section id="courts" className="py-32 bg-background relative overflow-hidden">
       {/* Ambient background glows */}
       <div className="glow-orb glow-gold w-[350px] h-[350px] -bottom-20 -right-20 opacity-10" />
       

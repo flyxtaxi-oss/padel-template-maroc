@@ -10,7 +10,7 @@ export default function Gallery({ locale }: { locale: string }) {
   const [hero, ...rest] = gallery;
 
   return (
-    <section id="gallery" className="py-32 bg-[#060913] relative overflow-hidden">
+    <section id="gallery" className="py-32 bg-background relative overflow-hidden">
       {/* Ambient background glows */}
       <div className="glow-orb glow-blue w-[400px] h-[400px] top-10 -right-20 opacity-10" />
       

@@ -10,7 +10,7 @@ export default function Events({ locale }: { locale: string }) {
   if (!events || events.length === 0) return null;
 
   return (
-    <section id="events" className="py-32 bg-[#060913] relative overflow-hidden">
+    <section id="events" className="py-32 bg-background relative overflow-hidden">
       {/* Ambient background glows */}
       <div className="glow-orb glow-blue w-[400px] h-[400px] -bottom-20 -left-20 opacity-10" />
       

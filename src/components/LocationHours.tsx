@@ -7,7 +7,7 @@ export default function LocationHours({ locale }: { locale: string }) {
   const t = getDictionary(locale);
 
   return (
-    <section id="contact" className="py-32 bg-[#060913] relative overflow-hidden">
+    <section id="contact" className="py-32 bg-background relative overflow-hidden">
       {/* Ambient background glows */}
       <div className="glow-orb glow-gold w-[300px] h-[300px] top-1/3 -left-20 opacity-10" />
       

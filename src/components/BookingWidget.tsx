@@ -118,7 +118,7 @@ export default function BookingWidget({ locale }: { locale: string }) {
   };
 
   return (
-    <section id="booking" className="py-32 bg-[#060913] relative overflow-hidden">
+    <section id="booking" className="py-32 bg-background relative overflow-hidden">
       {/* Ambient background glows */}
       <div className="glow-orb glow-blue w-[400px] h-[400px] top-1/4 -left-40 opacity-10" />
       <div className="glow-orb glow-gold w-[300px] h-[300px] bottom-10 -right-20 opacity-10" />

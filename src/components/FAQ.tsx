@@ -6,7 +6,7 @@ export default function FAQ({ locale }: { locale: string }) {
   if (!faq || faq.length === 0) return null;
 
   return (
-    <section id="faq" className="py-32 bg-[#060913] relative overflow-hidden">
+    <section id="faq" className="py-32 bg-background relative overflow-hidden">
       {/* Ambient background glows */}
       <div className="glow-orb glow-gold w-[400px] h-[400px] top-10 right-10 opacity-10" />
       

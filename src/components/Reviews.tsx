@@ -7,7 +7,7 @@ export default function Reviews({ locale }: { locale: string }) {
   if (!googleReviews || googleReviews.length === 0) return null;
 
   return (
-    <section className="py-32 bg-[#060913] relative overflow-hidden">
+    <section className="py-32 bg-background relative overflow-hidden">
       {/* Ambient background glows */}
       <div className="glow-orb glow-blue w-[400px] h-[400px] top-1/2 left-10 opacity-10" />
       

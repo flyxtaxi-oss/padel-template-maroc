@@ -7,7 +7,7 @@ export default function About({ locale }: { locale: string }) {
   const localText = about.text[locale] || about.text[clubConfig.defaultLocale];
 
   return (
-    <section id="about" className="py-32 bg-[#060913] relative overflow-hidden">
+    <section id="about" className="py-32 bg-background relative overflow-hidden">
       {/* Subtle ambient glow */}
       <div className="glow-orb glow-blue w-[400px] h-[400px] top-1/2 -left-40 opacity-10" />
       
