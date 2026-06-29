@@ -79,7 +79,7 @@ export type ClubConfig = {
   contact: Contact;
   
   // Booking Module
-  bookingMode: 'whatsapp' | 'supabase' | 'external';
+  bookingMode: 'whatsapp' | 'firebase' | 'external';
   slotDurationMinutes: number;
   bookedSlots: string[]; // e.g., ["2026-06-28T10:00"]
   reservation: {

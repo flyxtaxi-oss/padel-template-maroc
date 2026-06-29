@@ -4,7 +4,8 @@ import { useState } from 'react';
 import clubConfig from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import { format, addDays, parseISO, isBefore, isSameDay } from 'date-fns';
-import { supabase } from '@/lib/supabase';
+import { db } from '@/lib/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 import { Calendar as CalendarIcon, Clock } from 'lucide-react';
 
 export default function BookingWidget({ locale }: { locale: string }) {
@@ -87,19 +88,18 @@ export default function BookingWidget({ locale }: { locale: string }) {
     const whatsappMsg = `Bonjour, je souhaite réserver un terrain de padel.\n\nDate: ${slotDateTime}\nNom: ${name}\nTél: ${phone}\nNiveau: ${level}\nJoueurs: ${players}`;
     const waLink = `https://wa.me/${reservation.value.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(whatsappMsg)}`;
 
-    if (bookingMode === 'supabase' && supabase) {
+    if (bookingMode === 'firebase') {
       try {
-        await supabase.from('booking_requests').insert([
-          {
-            club_slug: clubConfig.slug,
-            date: format(selectedDate, 'yyyy-MM-dd'),
-            time_slot: selectedSlot,
-            name,
-            phone,
-            level,
-            players: parseInt(players)
-          }
-        ]);
+        await addDoc(collection(db, 'booking_requests'), {
+          club_slug: clubConfig.slug,
+          date: format(selectedDate, 'yyyy-MM-dd'),
+          time_slot: selectedSlot,
+          name,
+          phone,
+          level,
+          players: parseInt(players),
+          created_at: new Date().toISOString()
+        });
         setIsSuccess(true);
         // Still redirect to WhatsApp for instant notification
         setTimeout(() => window.open(waLink, '_blank'), 1500);
