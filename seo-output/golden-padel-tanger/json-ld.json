@@ -1,0 +1,75 @@
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "SportsActivityLocation",
+    "@id": "https://padel-one-xi.vercel.app/#club",
+    "name": "Golden Padel Club",
+    "image": [
+      "https://padel-one-xi.vercel.app/clubs/golden/1.jpg",
+      "https://padel-one-xi.vercel.app/clubs/golden/2.jpg"
+    ],
+    "priceRange": "$$",
+    "telephone": "+212600000000",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "Marjane Route de Rabat",
+      "addressLocality": "Tanger",
+      "addressCountry": "MA"
+    },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": 35.7336,
+      "longitude": -5.8336
+    },
+    "url": "https://padel-one-xi.vercel.app",
+    "openingHoursSpecification": [
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ],
+        "opens": "09:00",
+        "closes": "00:00"
+      }
+    ],
+    "sameAs": [
+      "https://instagram.com/goldenpadelclubtanger"
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Où se trouve Golden Padel Club à Tanger ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Nous sommes situés juste à côté du Marjane Route de Rabat à Tanger, Maroc. L'accès est facile avec un parking gratuit sur place."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Comment réserver un terrain de padel à Tanger ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Vous pouvez réserver votre terrain en ligne sur notre site web (sauvegardé via Firebase) ou en envoyant un message WhatsApp au +212600000000 pour une confirmation rapide."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Quel est le prix pour louer un terrain ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Le tarif de location de terrain est de 240 MAD pour une session de 90 minutes. La location de raquette est à 30 MAD par partie."
+        }
+      }
+    ]
+  }
+]

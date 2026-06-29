@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import clubConfig from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
-import { format, addDays, parseISO, isBefore, isSameDay } from 'date-fns';
+import { format, addDays, isSameDay } from 'date-fns';
 import { db } from '@/lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, User, Phone, Trophy, Users } from 'lucide-react';
 
 export default function BookingWidget({ locale }: { locale: string }) {
   const t = getDictionary(locale);
@@ -27,18 +27,22 @@ export default function BookingWidget({ locale }: { locale: string }) {
   // External mode just renders a button
   if (bookingMode === 'external') {
     return (
-      <section id="booking" className="py-24 bg-gray-50 dark:bg-gray-900 text-center">
-        <h2 className="font-heading text-4xl font-bold mb-8 text-[var(--primary)] dark:text-white">
-          {t.booking.title}
-        </h2>
-        <a 
-          href={reservation.value}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block bg-[var(--primary)] text-white font-bold px-10 py-4 rounded-full text-lg shadow-lg hover:bg-[var(--secondary)] transition-colors"
-        >
-          {t.actions.book}
-        </a>
+      <section id="booking" className="py-32 bg-background text-center relative overflow-hidden">
+        <div className="glow-orb glow-gold w-[300px] h-[300px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-10" />
+        <div className="max-w-3xl mx-auto px-6 relative z-10">
+          <h2 className="font-heading text-4xl sm:text-5xl font-black mb-8 text-white uppercase">
+            {t.booking.title}
+          </h2>
+          <div className="divider mx-auto mb-10" />
+          <a 
+            href={reservation.value}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-premium inline-block px-10 py-4 rounded-full text-black font-black text-xs uppercase tracking-widest shadow-lg"
+          >
+            {t.actions.book}
+          </a>
+        </div>
       </section>
     );
   }
@@ -47,10 +51,7 @@ export default function BookingWidget({ locale }: { locale: string }) {
   const upcomingDays = Array.from({ length: 7 }).map((_, i) => addDays(new Date(), i));
 
   // A naive parser to get slots for a given day based on openingHours
-  // In a real app, logic would map the selected day to 'Lundi - Vendredi' or 'Samedi - Dimanche' properly
-  // Here we simplify by picking the first openingHours entry for simplicity, or we can just assume 08:00 to 23:00
   const generateSlots = (date: Date) => {
-    // Basic slot generation from 08:00 to 22:00 for demo
     const slots = [];
     const startHour = 8;
     const endHour = 22;
@@ -118,34 +119,40 @@ export default function BookingWidget({ locale }: { locale: string }) {
   };
 
   return (
-    <section id="booking" className="py-32 bg-background relative overflow-hidden">
+    <section id="booking" className="py-36 bg-background relative overflow-hidden">
       {/* Ambient background glows */}
-      <div className="glow-orb glow-blue w-[400px] h-[400px] top-1/4 -left-40 opacity-10" />
-      <div className="glow-orb glow-gold w-[300px] h-[300px] bottom-10 -right-20 opacity-10" />
+      <div className="glow-orb glow-blue w-[400px] h-[400px] top-1/4 -left-40 opacity-10 animate-float" />
+      <div className="glow-orb glow-gold w-[300px] h-[300px] bottom-10 -right-20 opacity-10 animate-float-delayed" />
       
       <div className="container mx-auto px-6 max-w-4xl relative z-10">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-bold uppercase tracking-widest mb-6">
+        <div className="text-center mb-20">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-[10px] font-black uppercase tracking-widest mb-6">
             Réservations
           </div>
-          <h2 className="font-heading text-4xl font-black text-white">
+          <h2 className="font-heading text-4xl sm:text-5xl font-black text-white uppercase">
             {t.booking.title}
           </h2>
           <div className="divider mx-auto mt-4" />
         </div>
 
         {isSuccess ? (
-          <div className="glass border-green-500/30 bg-green-500/5 text-green-200 p-8 rounded-3xl text-center">
-            <h3 className="text-2xl font-bold mb-2">Merci !</h3>
-            <p className="text-lg">{t.booking.successMessage}</p>
+          <div className="glass border-gold-glow bg-yellow-500/5 text-yellow-100 p-12 rounded-[32px] text-center max-w-2xl mx-auto shadow-2xl animate-in fade-in zoom-in-95 duration-500">
+            <div className="w-16 h-16 rounded-full bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center mx-auto mb-6">
+              <span className="w-3 h-3 rounded-full bg-yellow-400 animate-ping" />
+            </div>
+            <h3 className="font-heading text-3xl font-black text-white uppercase mb-4">Demande Envoyée !</h3>
+            <p className="text-white/60 text-base leading-relaxed mb-6">
+              {t.booking.successMessage}
+            </p>
+            <div className="text-xs text-white/30 tracking-wider uppercase">Redirection vers WhatsApp en cours...</div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="glass p-8 sm:p-10 rounded-3xl relative z-10 border-white/5">
+          <form onSubmit={handleSubmit} className="glass p-8 sm:p-12 rounded-[32px] relative z-10 border border-white/5">
             
             {/* Step 1: Date */}
-            <div className="mb-8">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">
-                <CalendarIcon className="w-5 h-5 text-gold" />
+            <div className="mb-10">
+              <h3 className="text-sm font-black uppercase tracking-widest mb-5 flex items-center gap-3 text-white">
+                <span className="w-6 h-6 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-[10px] text-gold font-mono">1</span>
                 {t.booking.selectDate}
               </h3>
               <div className="flex gap-3 overflow-x-auto pb-4 hide-scrollbar">
@@ -156,14 +163,14 @@ export default function BookingWidget({ locale }: { locale: string }) {
                       key={i}
                       type="button"
                       onClick={() => { setSelectedDate(date); setSelectedSlot(null); }}
-                      className={`flex-shrink-0 flex flex-col items-center justify-center w-16 h-20 rounded-2xl border transition-all ${
+                      className={`flex-shrink-0 flex flex-col items-center justify-center w-16 h-20 rounded-[20px] border transition-all duration-300 ${
                         isSelected
                           ? 'border-yellow-500 bg-yellow-500/10 text-yellow-400'
-                          : 'border-white/5 bg-white/2 hover:border-yellow-500/30 text-white/60'
+                          : 'border-white/5 bg-white/2 hover:border-yellow-500/30 text-white/50'
                       }`}
                     >
-                      <span className="text-[10px] font-bold uppercase tracking-wider">{format(date, 'eee')}</span>
-                      <span className="text-xl font-bold mt-1">{format(date, 'dd')}</span>
+                      <span className="text-[10px] font-black uppercase tracking-wider">{format(date, 'eee')}</span>
+                      <span className="text-xl font-black font-mono mt-1">{format(date, 'dd')}</span>
                     </button>
                   );
                 })}
@@ -171,13 +178,13 @@ export default function BookingWidget({ locale }: { locale: string }) {
             </div>
 
             {/* Step 2: Time Slot */}
-            <div className="mb-8">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">
-                <Clock className="w-5 h-5 text-gold" />
+            <div className="mb-12">
+              <h3 className="text-sm font-black uppercase tracking-widest mb-5 flex items-center gap-3 text-white">
+                <span className="w-6 h-6 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-[10px] text-gold font-mono">2</span>
                 {t.booking.selectTime}
               </h3>
               {slotsForSelectedDate.length === 0 ? (
-                <p className="text-white/40">{t.booking.noSlots}</p>
+                <p className="text-white/30 text-sm leading-relaxed">{t.booking.noSlots}</p>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                   {slotsForSelectedDate.map(slot => {
@@ -187,10 +194,10 @@ export default function BookingWidget({ locale }: { locale: string }) {
                         key={slot}
                         type="button"
                         onClick={() => setSelectedSlot(slot)}
-                        className={`py-3 rounded-xl font-bold border transition-all text-sm ${
+                        className={`py-3 rounded-xl font-bold font-mono border transition-all duration-300 text-xs tracking-wider ${
                           isSelected
                             ? 'border-yellow-500 bg-yellow-500/15 text-yellow-400'
-                            : 'border-white/5 bg-white/2 hover:border-yellow-500/30 text-white/80'
+                            : 'border-white/5 bg-white/2 hover:border-yellow-500/30 text-white/70'
                         }`}
                       >
                         {slot}
@@ -203,36 +210,95 @@ export default function BookingWidget({ locale }: { locale: string }) {
 
             {/* Step 3: Details */}
             {selectedSlot && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <div className="space-y-8 border-t border-white/5 pt-10 animate-in fade-in slide-in-from-bottom-6 duration-500">
+                <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-3 text-white">
+                  <span className="w-6 h-6 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-[10px] text-gold font-mono">3</span>
+                  Compléter la réservation
+                </h3>
+
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-white/50 mb-2">{t.booking.name}</label>
-                    <input required type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-3.5 rounded-xl border border-white/10 bg-white/5 focus:border-yellow-500/50 outline-none text-white transition-all text-sm" />
+                  {/* Name */}
+                  <div className="relative">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2 pl-1">Nom complet</label>
+                    <div className="relative">
+                      <input 
+                        required 
+                        type="text" 
+                        value={name} 
+                        onChange={e => setName(e.target.value)} 
+                        placeholder="Ex: Yassine Belghiti"
+                        className="w-full p-4 pl-12 rounded-xl border border-white/5 bg-[#090e1a]/60 focus:border-yellow-500/40 outline-none text-white transition-all text-xs tracking-wider placeholder-white/20" 
+                      />
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-white/50 mb-2">{t.booking.phone}</label>
-                    <input required type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full p-3.5 rounded-xl border border-white/10 bg-white/5 focus:border-yellow-500/50 outline-none text-white transition-all text-sm" />
+
+                  {/* Phone */}
+                  <div className="relative">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2 pl-1">Numéro de téléphone</label>
+                    <div className="relative">
+                      <input 
+                        required 
+                        type="tel" 
+                        value={phone} 
+                        onChange={e => setPhone(e.target.value)} 
+                        placeholder="Ex: +212612345678"
+                        className="w-full p-4 pl-12 rounded-xl border border-white/5 bg-[#090e1a]/60 focus:border-yellow-500/40 outline-none text-white transition-all text-xs tracking-wider placeholder-white/20" 
+                      />
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-white/50 mb-2">{t.booking.level}</label>
-                    <input required type="text" value={level} onChange={e => setLevel(e.target.value)} className="w-full p-3.5 rounded-xl border border-white/10 bg-white/5 focus:border-yellow-500/50 outline-none text-white transition-all text-sm" />
+
+                  {/* Level */}
+                  <div className="relative">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2 pl-1">Votre niveau (1 - 5 ou Débutant/Intermédiaire)</label>
+                    <div className="relative">
+                      <input 
+                        required 
+                        type="text" 
+                        value={level} 
+                        onChange={e => setLevel(e.target.value)} 
+                        placeholder="Ex: Intermédiaire (Niveau 3)"
+                        className="w-full p-4 pl-12 rounded-xl border border-white/5 bg-[#090e1a]/60 focus:border-yellow-500/40 outline-none text-white transition-all text-xs tracking-wider placeholder-white/20" 
+                      />
+                      <Trophy className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-white/50 mb-2">{t.booking.players}</label>
-                    <select value={players} onChange={e => setPlayers(e.target.value)} className="w-full p-3.5 rounded-xl border border-white/10 bg-[#0c1322] focus:border-yellow-500/50 outline-none text-white transition-all text-sm">
-                      <option value="2">2</option>
-                      <option value="3">3</option>
-                      <option value="4">4</option>
-                    </select>
+
+                  {/* Players Count */}
+                  <div className="relative">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2 pl-1">Nombre de joueurs</label>
+                    <div className="relative">
+                      <select 
+                        value={players} 
+                        onChange={e => setPlayers(e.target.value)} 
+                        className="w-full p-4 pl-12 rounded-xl border border-white/5 bg-[#090e1a]/80 focus:border-yellow-500/40 outline-none text-white transition-all text-xs tracking-wider appearance-none"
+                      >
+                        <option value="2">2 Joueurs</option>
+                        <option value="3">3 Joueurs</option>
+                        <option value="4">4 Joueurs (Standard)</option>
+                      </select>
+                      <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                    </div>
                   </div>
                 </div>
 
+                {/* Submitting button */}
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="btn-premium w-full py-4 rounded-full text-black font-bold text-lg shadow-lg"
+                  className="btn-premium w-full py-4.5 rounded-full text-black font-black text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-3 mt-4"
                 >
-                  {isSubmitting ? '...' : t.booking.confirm}
+                  {isSubmitting ? (
+                    <span className="w-5 h-5 rounded-full border-2 border-black border-t-transparent animate-spin" />
+                  ) : (
+                    <>
+                      <span>{t.booking.confirm}</span>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </>
+                  )}
                 </button>
               </div>
             )}

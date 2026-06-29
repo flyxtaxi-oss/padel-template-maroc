@@ -36,14 +36,15 @@ export default function Footer({ locale }: { locale: string }) {
       <div className="py-16 px-6" style={{ background: 'linear-gradient(135deg, #D4AF37, #F59E0B)' }}>
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <div>
-            <h3 className="font-heading text-3xl font-black text-black">Prêt à jouer ?</h3>
-            <p className="text-black/60 mt-1">Réservez votre terrain en 30 secondes.</p>
+            <span className="text-[10px] font-black uppercase tracking-widest text-black/50 block mb-1">Votre club premium</span>
+            <h3 className="font-heading text-3xl font-black text-black uppercase leading-none">Prêt à jouer ?</h3>
+            <p className="text-black/60 text-sm mt-1">Réservez votre terrain en 30 secondes.</p>
           </div>
           <a
             href={`/${locale}#booking`}
-            className="px-8 py-4 rounded-full bg-black text-white font-bold hover:bg-black/80 transition-colors"
+            className="px-8 py-3.5 rounded-full bg-[#060913] text-white hover:text-gold hover:scale-105 active:scale-95 transition-all text-xs font-black uppercase tracking-widest shadow-lg border border-white/5"
           >
-            {t.actions.book} →
+            {t.actions.book}
           </a>
         </div>
       </div>

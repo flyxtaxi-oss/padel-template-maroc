@@ -176,7 +176,7 @@ const goldenConfig: ClubConfig = {
   },
   
   // Booking
-  bookingMode: 'whatsapp',
+  bookingMode: 'firebase',
   slotDurationMinutes: 90,
   bookedSlots: [],
   reservation: {

@@ -1,0 +1,35 @@
+# Golden Padel Club Tanger - Factual Summary
+
+## General Info
+- **Name**: Golden Padel Club
+- **Type**: Premium Indoor Padel Club (Sports Activity Location)
+- **Location**: Marjane Route de Rabat, Tanger, Maroc (Near Marjane supermarket)
+- **Established**: 2023
+
+## Facilities & Courts
+- **Total Courts**: 4 indoor (covered) courts
+- **Turf Surface**: Mondo Supercourt (professional world padel tour quality)
+- **Amenities**: Complete vestiaries (changing rooms), hot showers, lockers, pro-shop for gear and balls, free secure parking, café/lounge area.
+
+## Opening Hours
+- **Every Day (7/7)**: 09:00 - 00:00 (Midnight)
+
+## Pricing
+- **Court Rental (90 minutes)**: 240 MAD
+- **Racket Rental**: 30 MAD per match
+
+## Booking & Reservation
+- **Booking Flow**: Real-time slot booking on the website with storage in Firebase Firestore, followed by instant validation and check-in via WhatsApp redirect (+212600000000).
+- **Direct Reservation Link**: https://wa.me/212600000000
+
+## Contact Information
+- **Phone**: +212600000000
+- **WhatsApp**: +212600000000
+- **Instagram**: https://instagram.com/goldenpadelclubtanger
+- **Address**: Marjane Route de Rabat, Tanger, Maroc
+- **Coordinates**: Latitude 35.7336, Longitude -5.8336 (approximate)
+
+## Languages Supported
+- French (FR)
+- Arabic (AR)
+- Spanish (ES)
