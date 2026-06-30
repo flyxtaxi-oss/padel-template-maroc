@@ -28,7 +28,7 @@ export default function Gallery({ locale }: { locale: string }) {
               Le club en images
             </div>
             <h2 className="font-heading text-4xl sm:text-5xl font-black text-white uppercase">
-              {t.navigation.gallery}
+              Notre <span className="font-quote italic text-gold normal-case font-medium tracking-wide">Galerie</span>
             </h2>
           </div>
           <a
@@ -59,11 +59,11 @@ export default function Gallery({ locale }: { locale: string }) {
                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
               />
               
-              {/* Elegant hover vignette overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#060913]/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6" />
+              {/* Elegant hover vignette overlay with gold outline */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-end p-6 border-0 group-hover:border-[3px] group-hover:border-yellow-500/20 rounded-[24px] pointer-events-none" />
               
-              <span className="absolute bottom-6 left-6 text-[10px] font-black uppercase tracking-widest text-white/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                Golden Padel Club Tanger
+              <span className="absolute bottom-6 left-6 text-[10px] font-mono font-black uppercase tracking-widest text-gold opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                Golden Padel Tanger
               </span>
             </div>
           ))}

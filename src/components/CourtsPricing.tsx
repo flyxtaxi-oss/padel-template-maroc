@@ -30,7 +30,7 @@ export default function CourtsPricing({ locale }: { locale: string }) {
             Les installations
           </div>
           <h2 className="font-heading text-4xl sm:text-5xl font-black text-white mb-4 uppercase">
-            {t.navigation.courts}
+            Terrains & <span className="font-quote italic text-gold normal-case font-medium tracking-wide">Tarifs</span>
           </h2>
           <div className="divider mx-auto" />
         </div>
@@ -80,7 +80,7 @@ export default function CourtsPricing({ locale }: { locale: string }) {
               return (
                 <div
                   key={idx}
-                  className="relative rounded-[24px] p-6 flex items-center justify-between overflow-hidden group transition-all duration-300 hover:scale-[1.02] border"
+                  className="relative rounded-[24px] p-6 pl-8 flex items-center justify-between overflow-hidden group transition-all duration-300 hover:scale-[1.02] border"
                   style={isFirst
                     ? { 
                         background: 'linear-gradient(135deg, #D4AF37, #F59E0B)', 
@@ -93,16 +93,25 @@ export default function CourtsPricing({ locale }: { locale: string }) {
                       }
                   }
                 >
-                  <div>
-                    <div className={`font-black uppercase tracking-wide text-sm ${isFirst ? 'text-black' : 'text-white'}`}>{label}</div>
-                    <div className={`text-xs mt-1 ${isFirst ? 'text-black/50' : 'text-white/40'}`}>{item.duration}</div>
+                  {/* Skeuomorphic ticket notches */}
+                  <div className="absolute top-1/2 -translate-y-1/2 -left-3.5 w-7 h-7 rounded-full bg-black border border-white/5 z-20 group-hover:scale-110 transition-transform" />
+                  <div className="absolute top-1/2 -translate-y-1/2 -right-3.5 w-7 h-7 rounded-full bg-black border border-white/5 z-20 group-hover:scale-110 transition-transform" />
+
+                  {/* Left info */}
+                  <div className="flex-grow min-w-0 pr-4">
+                    <div className={`font-black uppercase tracking-wide text-sm truncate ${isFirst ? 'text-black' : 'text-white'}`}>{label}</div>
+                    <div className={`text-xs mt-1 ${isFirst ? 'text-black/60' : 'text-white/40'}`}>{item.duration}</div>
                   </div>
+
+                  {/* Dashed line */}
+                  <div className={`h-12 border-l-2 border-dashed ${isFirst ? 'border-black/20' : 'border-white/10'} mx-4`} />
                   
-                  <div className="flex items-baseline gap-1">
-                    <span className={`font-heading font-black text-3xl sm:text-4xl ${isFirst ? 'text-black' : 'text-gold'}`}>
+                  {/* Right info */}
+                  <div className="flex items-baseline gap-0.5 shrink-0 pl-2">
+                    <span className={`font-mono font-black text-3xl sm:text-4xl ${isFirst ? 'text-black' : 'text-gold'}`}>
                       {item.price}
                     </span>
-                    <span className={`text-xs font-black ${isFirst ? 'text-black/60' : 'text-white/45'}`}>
+                    <span className={`text-[10px] font-black ${isFirst ? 'text-black/70' : 'text-white/45'}`}>
                       MAD
                     </span>
                   </div>

@@ -130,7 +130,7 @@ export default function BookingWidget({ locale }: { locale: string }) {
             Réservations
           </div>
           <h2 className="font-heading text-4xl sm:text-5xl font-black text-white uppercase">
-            {t.booking.title}
+            Réserver un <span className="font-quote italic text-gold normal-case font-medium tracking-wide">terrain</span>
           </h2>
           <div className="divider mx-auto mt-4" />
         </div>
@@ -165,8 +165,8 @@ export default function BookingWidget({ locale }: { locale: string }) {
                       onClick={() => { setSelectedDate(date); setSelectedSlot(null); }}
                       className={`flex-shrink-0 flex flex-col items-center justify-center w-16 h-20 rounded-[20px] border transition-all duration-300 ${
                         isSelected
-                          ? 'border-yellow-500 bg-yellow-500/10 text-yellow-400'
-                          : 'border-white/5 bg-white/2 hover:border-yellow-500/30 text-white/50'
+                          ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-400 shadow-[0_8px_20px_rgba(212,175,55,0.15)]'
+                          : 'border-white/5 bg-white/2 hover:border-yellow-500/20 hover:bg-white/5 text-white/60'
                       }`}
                     >
                       <span className="text-[10px] font-black uppercase tracking-wider">{format(date, 'eee')}</span>

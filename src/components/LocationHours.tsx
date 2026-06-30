@@ -19,7 +19,9 @@ export default function LocationHours({ locale }: { locale: string }) {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-[10px] font-black uppercase tracking-widest mb-6">
             Nous trouver
           </div>
-          <h2 className="font-heading text-4xl sm:text-5xl font-black text-white uppercase">{t.navigation.contact}</h2>
+          <h2 className="font-heading text-4xl sm:text-5xl font-black text-white uppercase">
+            Nous <span className="font-quote italic text-gold normal-case font-medium tracking-wide">contacter</span>
+          </h2>
           <div className="divider mx-auto mt-4" />
         </div>
 
@@ -70,17 +72,16 @@ export default function LocationHours({ locale }: { locale: string }) {
                 href={`https://wa.me/${contact.whatsapp.replace(/[^0-9]/g, '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2.5 py-4 rounded-full font-black text-xs uppercase tracking-widest text-white transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
-                style={{ background: '#25D366', boxShadow: '0 10px 30px rgba(37,211,102,0.2)' }}
+                className="flex items-center justify-center gap-2.5 py-4 rounded-full font-black text-xs uppercase tracking-widest text-green-400 transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] glass border-green-500/20 bg-green-500/5 hover:bg-green-500/10 shadow-[0_10px_30px_rgba(37,211,102,0.1)]"
               >
-                <MessageCircle className="w-4 h-4 fill-white" />
+                <MessageCircle className="w-4 h-4 fill-green-400" />
                 WhatsApp
               </a>
               <a
                 href={`tel:${contact.phone}`}
-                className="flex items-center justify-center gap-2.5 py-4 rounded-full font-black text-xs uppercase tracking-widest text-white/80 transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] glass border-white/5 hover:bg-white/10"
+                className="flex items-center justify-center gap-2.5 py-4 rounded-full font-black text-xs uppercase tracking-widest text-yellow-400 transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] glass border-yellow-500/20 bg-yellow-500/5 hover:bg-yellow-500/10 shadow-[0_10px_30px_rgba(212,175,55,0.1)]"
               >
-                <Phone className="w-4 h-4" />
+                <Phone className="w-4 h-4 text-yellow-400" />
                 Appeler
               </a>
             </div>

@@ -25,10 +25,10 @@ export default function Header({ locale }: { locale: string }) {
 
   return (
     <header className="fixed top-0 left-0 w-full z-50 transition-all duration-500 pt-4 px-4 sm:px-6">
-      <div className={`mx-auto max-w-7xl h-18 flex items-center justify-between px-6 transition-all duration-500 ${
+      <div className={`mx-auto max-w-7xl h-16 rounded-full flex items-center justify-between px-6 transition-all duration-500 border ${
         scrolled 
-          ? 'glass-dark rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 max-w-5xl h-16' 
-          : 'bg-transparent border border-transparent'
+          ? 'glass-dark border-white/10 shadow-[0_25px_50px_rgba(0,0,0,0.8)]' 
+          : 'bg-black/30 backdrop-blur-md border-white/5 shadow-lg'
       }`}>
 
         {/* Logo */}
