@@ -2,6 +2,8 @@
 import clubConfig from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import Link from 'next/link';
+import { ArrowRight, MapPin } from 'lucide-react';
+import CountUp from '@/components/CountUp';
 
 export default function Hero({ locale }: { locale: string }) {
   const { hero, name, tagline } = clubConfig;
@@ -9,129 +11,80 @@ export default function Hero({ locale }: { locale: string }) {
   const localTagline = tagline[locale] || tagline[clubConfig.defaultLocale];
   const localPitch = hero.pitch[locale] || hero.pitch[clubConfig.defaultLocale];
 
+  const stats = [
+    { value: `${clubConfig.about.stats.courts}`, label: t.ui.indoorCourts },
+    { value: clubConfig.about.stats.players, label: t.ui.activeMembers },
+    { value: '7j/7', label: '09h – 00h' },
+  ];
+
   return (
-    <section className="relative w-full min-h-screen flex items-center overflow-hidden bg-[#060913] pt-24 pb-16">
-      
-      {/* Background visual layering */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        {/* Parallax blurred ambient map of the court */}
-        <div 
-          className="absolute -top-1/4 -right-1/4 w-[80%] h-[80%] opacity-20 filter blur-[80px] rounded-full"
-          style={{
-            backgroundImage: `radial-gradient(circle, #1062ae 0%, #060913 70%)`
-          }}
-        />
-        <div 
-          className="absolute -bottom-1/4 -left-1/4 w-[80%] h-[80%] opacity-20 filter blur-[80px] rounded-full"
-          style={{
-            backgroundImage: `radial-gradient(circle, #d4af37 0%, #060913 70%)`
-          }}
-        />
-        {/* Subtle grid backing */}
-        <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:40px_40px]" />
-      </div>
+    <section className="panel-court relative w-full overflow-hidden pt-32 pb-20 sm:pt-40 sm:pb-28">
+      {/* court-line brand motif, very subtle */}
+      <div aria-hidden className="court-lines pointer-events-none absolute inset-0 opacity-40" />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-32 right-[-10%] h-[460px] w-[460px] rounded-full opacity-25 blur-[130px]"
+        style={{ background: 'radial-gradient(circle, #d9b25a 0%, transparent 70%)' }}
+      />
 
-      {/* Floating orbs */}
-      <div className="glow-orb glow-blue w-[400px] h-[400px] -top-20 -left-20 opacity-20 animate-float" />
-      <div className="glow-orb glow-gold w-[350px] h-[350px] bottom-10 right-10 opacity-15 animate-float-delayed" />
+      <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-6 lg:grid-cols-2 lg:gap-16">
 
-      {/* Content wrapper */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 grid lg:grid-cols-12 gap-16 items-center">
-        
-        {/* Left Column: Typography */}
-        <div className="lg:col-span-7 flex flex-col items-start text-left">
-          {/* Micro-badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-yellow-500/25 bg-yellow-500/5 text-yellow-400 text-[10px] font-black uppercase tracking-widest mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
-            L'excellence du padel · Tanger
-          </div>
+        {/* Text */}
+        <div className="animate-fade-up">
+          <span className="eyebrow">
+            <span className="h-1.5 w-1.5 rounded-full bg-gold-bright" />
+            Padel premium · Tanger
+          </span>
 
-          {/* Luxury Headings */}
-          <h1 className="font-heading text-6xl sm:text-7xl xl:text-8.5xl font-black leading-[0.9] tracking-tighter mb-6 text-white uppercase">
-            <span className="block text-white/95">Golden</span>
-            <span className="block font-quote italic text-gold normal-case font-medium tracking-wide">Padel</span>
-            <span className="block text-white/95">Club</span>
+          <h1 className="mt-6 font-display text-5xl font-semibold leading-[1.04] t-title sm:text-6xl xl:text-[4.6rem]">
+            Golden <span className="italic t-gold">Padel</span> Club
           </h1>
 
-          {/* Subheading/Tagline */}
-          <p className="text-lg sm:text-xl text-white/70 font-semibold mb-3 max-w-xl border-l-2 border-yellow-500/40 pl-4">
-            {localTagline}
-          </p>
-          
-          <p className="text-sm text-white/45 mb-10 max-w-lg leading-relaxed pl-4">
-            {localPitch}
-          </p>
+          <p className="mt-6 max-w-lg text-lg t-soft">{localTagline}</p>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed t-muted">{localPitch}</p>
 
-          {/* Luxury Actions */}
-          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto pl-4">
-            <Link
-              href={`/${locale}#booking`}
-              className="btn-premium group inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-full text-black font-black text-xs uppercase tracking-widest transition-all shadow-[0_10px_30px_rgba(212,175,55,0.2)]"
-            >
-              <span>{t.actions.book}</span>
-              <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <Link href={`/${locale}#booking`} className="btn-gold px-7 py-3.5 text-sm">
+              {t.actions.book}
+              <ArrowRight className="h-4 w-4" />
             </Link>
-            
-            <Link
-              href={`/${locale}#about`}
-              className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full text-white/80 font-black text-xs uppercase tracking-widest glass border-white/5 hover:bg-white/10 transition-all"
-            >
+            <Link href={`/${locale}#about`} className="btn-outline px-7 py-3.5 text-sm font-medium">
               {t.actions.discover}
             </Link>
           </div>
 
-          {/* Stats Bar */}
-          <div className="flex gap-10 mt-16 pt-8 border-t border-white/5 w-full max-w-md pl-4">
-            {[
-              { value: `${clubConfig.about.stats.courts}`, label: 'Terrains Indoor' },
-              { value: clubConfig.about.stats.players, label: 'Membres Actifs' },
-              { value: '09h - 00h', label: 'Ouvert 7j/7' }
-            ].map((stat, i) => (
-              <div key={i} className="flex flex-col">
-                <span className="font-mono text-xl sm:text-2xl font-black text-white">{stat.value}</span>
-                <span className="text-[9px] uppercase font-bold tracking-widest text-white/35 mt-1">{stat.label}</span>
+          <div className="mt-14 grid max-w-md grid-cols-3 gap-6 border-t hair pt-8">
+            {stats.map((s, i) => (
+              <div key={i}>
+                <CountUp value={s.value} className="font-mono text-2xl font-bold t-title sm:text-3xl" />
+                <div className="mt-1 text-xs t-muted">{s.label}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Right Column: Styled Photo Showcase */}
-        <div className="lg:col-span-5 relative w-full aspect-[4/5] sm:aspect-square lg:aspect-[4/5] rounded-[32px] overflow-hidden group">
-          {/* Outer gold-line glow frame */}
-          <div className="absolute inset-0 rounded-[32px] border border-yellow-500/20 p-2 z-10 pointer-events-none transition-all duration-700 group-hover:border-yellow-500/40" />
-          
-          {/* Image wrapper */}
-          <div className="relative w-full h-full rounded-[24px] overflow-hidden">
+        {/* Photo */}
+        <div className="relative animate-fade-up" style={{ animationDelay: '0.1s' }}>
+          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.75rem] border border-gold/25 sm:aspect-square lg:aspect-[4/5]">
             <img
-              src="/clubs/golden/1.jpg"
-              alt={`${name} - terrain de padel`}
-              className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+              src={hero.mediaPath}
+              alt={`${name} — terrain de padel indoor à Tanger`}
+              className="h-full w-full object-cover"
             />
-            {/* Elegant vignette overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#060913] via-transparent to-transparent opacity-80" />
-            <div className="absolute inset-0 bg-[#060913]/10 mix-blend-overlay" />
-          </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-court/80 via-transparent to-transparent" />
 
-          {/* Floating interactive element */}
-          <div className="absolute bottom-6 left-6 right-6 glass p-4 rounded-2xl border border-white/10 backdrop-blur-md flex items-center justify-between z-20">
-            <div>
-              <p className="text-white text-xs font-black uppercase tracking-wider">Terrain de Padel</p>
-              <p className="text-white/40 text-[10px] mt-0.5">{clubConfig.courts[0]?.surface}</p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
-              <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+            <div className="absolute bottom-5 left-5 right-5 flex items-center gap-3 rounded-2xl border border-white/15 bg-court-deep/70 px-4 py-3 backdrop-blur-md">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gold/20">
+                <MapPin className="h-4 w-4 text-gold-bright" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-cream">Marjane, Route de Rabat</p>
+                <p className="text-xs text-cream/60">{clubConfig.courts[0]?.surface}</p>
+              </div>
             </div>
           </div>
         </div>
 
-      </div>
-
-      {/* Scroll indicator */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1.5 opacity-25">
-        <span className="text-white text-[9px] tracking-widest uppercase font-black">Scroll</span>
-        <div className="w-px h-10 bg-gradient-to-b from-white/50 to-transparent" />
       </div>
     </section>
   );

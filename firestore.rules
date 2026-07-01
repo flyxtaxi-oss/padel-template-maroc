@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// Règles de sécurité Firestore — Golden Padel Club
+// À publier dans : console Firebase → Firestore Database → Règles → Publier.
+//
+// Principe : le formulaire du site peut CRÉER une demande de réservation,
+// mais PERSONNE ne peut la lire/modifier/supprimer côté client.
+// La lecture se fait uniquement côté serveur (route /api/admin, via clé
+// de service Admin SDK qui contourne ces règles) → les téléphones clients
+// ne sont jamais exposés publiquement.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /booking_requests/{docId} {
+      // Création autorisée depuis le site, avec validation minimale du format.
+      allow create: if
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.name.size() < 120 &&
+        request.resource.data.phone is string &&
+        request.resource.data.phone.size() > 4 &&
+        request.resource.data.phone.size() < 30 &&
+        request.resource.data.club_slug is string;
+
+      // Aucune lecture / modification / suppression côté client.
+      allow read, update, delete: if false;
+    }
+
+    // Tout le reste est fermé par défaut.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

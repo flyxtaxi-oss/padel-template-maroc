@@ -1,27 +1,24 @@
 import type { Metadata } from "next";
-import { Inter, Outfit, Playfair_Display, JetBrains_Mono } from "next/font/google";
+import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 import "../globals.css";
 import clubConfig from "@/config/club.config";
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
-});
-
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-  style: ["italic"],
+  display: "swap",
 });
 
 const mono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -107,7 +104,7 @@ export default async function RootLayout({
     <html
       lang={locale}
       dir={isRtl ? "rtl" : "ltr"}
-      className={`${inter.variable} ${outfit.variable} ${playfair.variable} ${mono.variable} h-full antialiased`}
+      className={`${inter.variable} ${fraunces.variable} ${mono.variable} h-full antialiased`}
     >
       <head>
         <script

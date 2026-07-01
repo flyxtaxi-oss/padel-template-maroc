@@ -1,69 +1,46 @@
 import clubConfig from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
+import CountUp from '@/components/CountUp';
 
 export default function About({ locale }: { locale: string }) {
   const { about } = clubConfig;
   const t = getDictionary(locale);
   const localText = about.text[locale] || about.text[clubConfig.defaultLocale];
 
+  const stats = [
+    { value: `${about.stats.courts}`, label: t.ui.indoorCourts },
+    { value: about.stats.players, label: t.ui.activeMembers },
+    { value: '21°C', label: t.ui.regulatedTemp },
+  ];
+
   return (
-    <section id="about" className="py-36 bg-background relative overflow-hidden">
-      {/* Subtle ambient glow */}
-      <div className="glow-orb glow-blue w-[400px] h-[400px] top-1/2 -left-40 opacity-10 animate-float" />
-      <div className="glow-orb glow-gold w-[300px] h-[300px] top-1/3 -right-20 opacity-5 animate-float-delayed" />
-      
-      <div className="max-w-7xl mx-auto px-6 relative z-10">
-        <div className="grid lg:grid-cols-12 gap-16 lg:gap-20 items-center">
+    <section id="about" className="section bg-cream">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
 
-          {/* Left Column - Single Editorial Showcase Image */}
-          <div className="lg:col-span-5 relative">
-            {/* Golden decorative accent background card */}
-            <div className="absolute -inset-3 rounded-[36px] bg-gradient-to-br from-yellow-500/10 to-transparent -rotate-2 z-0 scale-95" />
-            
-            <div className="relative rounded-[28px] overflow-hidden aspect-[4/5] border border-white/5 shadow-2xl z-10 group">
-              <img 
-                src="/clubs/golden/2.jpg" 
-                alt="Golden Padel Club terrain" 
-                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#060913]/60 to-transparent opacity-80" />
+          <div className="relative" data-reveal>
+            <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] card-lift">
+              <img src="/clubs/golden/2.jpg" alt="Golden Padel Club — installations" className="h-full w-full object-cover" />
             </div>
-
-            {/* Floating gold stamp badge */}
-            <div className="absolute -bottom-6 -right-6 glass-dark rounded-2xl p-5 border border-yellow-500/20 z-25 shadow-xl transition-transform duration-500 hover:scale-105">
-              <div className="text-gold font-mono font-black text-4xl leading-none">{about.stats.established}</div>
-              <div className="text-white/40 text-[9px] uppercase tracking-widest font-black mt-1.5">Fondation du club</div>
+            <div className="absolute -bottom-5 -right-4 rounded-2xl bg-court px-6 py-4 card-lift sm:-right-5">
+              <div className="font-mono text-3xl font-bold text-gold-bright">{about.stats.established}</div>
+              <div className="mt-0.5 text-xs text-cream/70">Fondation du club</div>
             </div>
           </div>
 
-          {/* Right Column - Luxury Copywriting */}
-          <div className="lg:col-span-7 flex flex-col items-start">
-            {/* Tag */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-[10px] font-black uppercase tracking-widest mb-6">
-              L'histoire
-            </div>
-            
-            {/* Title */}
-            <h2 className="font-heading text-4xl sm:text-5xl font-black text-white mb-6 leading-tight uppercase">
-              Le padel, <span className="font-quote italic text-gold normal-case font-medium tracking-wide">autrement.</span>
+          <div data-reveal style={{ '--reveal-delay': '120ms' } as React.CSSProperties}>
+            <span className="eyebrow">L'histoire</span>
+            <h2 className="mt-4 font-display text-3xl font-semibold t-title sm:text-[2.6rem] sm:leading-tight">
+              Le padel, <span className="italic t-gold">autrement</span>
             </h2>
-            <div className="divider mb-8" />
-            
-            {/* Body */}
-            <p className="text-white/60 text-base leading-relaxed mb-12 max-w-xl">
-              {localText}
-            </p>
+            <div className="divider mt-5" />
+            <p className="mt-6 max-w-xl text-base leading-relaxed t-soft">{localText}</p>
 
-            {/* Glassmorphic Stats Grid */}
-            <div className="grid grid-cols-3 gap-4 w-full">
-              {[
-                { value: `${about.stats.courts}`, label: 'Terrains Indoor' },
-                { value: about.stats.players, label: 'Membres Actifs' },
-                { value: '21°C', label: 'Régulation Temp.' },
-              ].map((s, i) => (
-                <div key={i} className="glass rounded-2xl p-5 text-center border border-white/5 transition-all duration-300 hover:border-yellow-500/20">
-                  <div className="font-mono text-2xl sm:text-3xl font-black text-gold">{s.value}</div>
-                  <div className="text-white/35 text-[9px] uppercase tracking-widest font-bold mt-1.5">{s.label}</div>
+            <div className="mt-10 grid grid-cols-3 gap-4">
+              {stats.map((s, i) => (
+                <div key={i} className="card card-lift p-5 text-center">
+                  <CountUp value={s.value} className="block font-mono text-2xl font-bold t-gold sm:text-3xl" />
+                  <div className="mt-1.5 text-xs t-muted">{s.label}</div>
                 </div>
               ))}
             </div>

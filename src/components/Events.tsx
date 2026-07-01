@@ -10,45 +10,38 @@ export default function Events({ locale }: { locale: string }) {
   if (!events || events.length === 0) return null;
 
   return (
-    <section id="events" className="py-32 bg-background relative overflow-hidden">
-      {/* Ambient background glows */}
-      <div className="glow-orb glow-blue w-[400px] h-[400px] -bottom-20 -left-20 opacity-10" />
-      
-      <div className="max-w-7xl mx-auto px-6 relative z-10">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-bold uppercase tracking-widest mb-6">
-            <Trophy className="w-3 h-3" />
-            Compétitions
-          </div>
-          <h2 className="font-heading text-4xl sm:text-5xl font-black text-white">{t.navigation.events}</h2>
+    <section id="events" className="section bg-cream">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="mb-12 text-center">
+          <span className="eyebrow"><Trophy className="h-3.5 w-3.5" />Compétitions</span>
+          <h2 className="mt-4 font-display text-3xl font-semibold t-title sm:text-4xl">{t.navigation.events}</h2>
+          <div className="divider mx-auto mt-5" />
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {events.map(event => {
             const title = event.title[locale] || event.title[clubConfig.defaultLocale] || '';
             const description = event.description[locale] || event.description[clubConfig.defaultLocale] || '';
             const eventDate = parseISO(event.date);
             return (
-              <div key={event.id} className="glass rounded-3xl overflow-hidden group hover:border-yellow-500/20 transition-all" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div className="p-7">
-                  <div className="flex items-center justify-between mb-5">
-                    <span className="px-3 py-1 rounded-full text-xs font-black text-black" style={{ background: 'linear-gradient(135deg, #D4AF37, #F59E0B)' }}>{event.format}</span>
-                    <div className="flex items-center gap-1.5 text-white/40 text-xs">
-                      <Calendar className="w-3 h-3" />
-                      {format(eventDate, 'dd/MM/yyyy')}
-                    </div>
+              <div key={event.id} className="card card-lift card-hover flex flex-col p-6">
+                <div className="mb-5 flex items-center justify-between">
+                  <span className="rounded-full bg-gold px-3 py-1 text-xs font-bold text-[#1a140a]">{event.format}</span>
+                  <div className="flex items-center gap-1.5 text-xs t-muted">
+                    <Calendar className="h-3.5 w-3.5" />
+                    {format(eventDate, 'dd/MM/yyyy')}
                   </div>
-                  <h3 className="font-heading text-xl font-black text-white mb-3">{title}</h3>
-                  <p className="text-white/50 text-sm leading-relaxed mb-6 line-clamp-2">{description}</p>
-                  <div className="flex items-center justify-between pt-5 border-t border-white/5">
-                    <div className="flex items-center gap-2 text-yellow-400 font-bold">
-                      <Trophy className="w-4 h-4" />
-                      {event.prizeMAD.toLocaleString()} MAD
-                    </div>
-                    <Link href={`/${locale}/events/${event.id}`} className="flex items-center gap-1 text-white/40 hover:text-white text-sm transition-colors group-hover:text-yellow-400">
-                      {t.actions.readMore} <ArrowRight className="w-3 h-3" />
-                    </Link>
+                </div>
+                <h3 className="font-display text-lg font-semibold t-title">{title}</h3>
+                <p className="mt-2 line-clamp-2 flex-grow text-sm leading-relaxed t-muted">{description}</p>
+                <div className="mt-6 flex items-center justify-between border-t hair pt-5">
+                  <div className="flex items-center gap-2 font-semibold t-gold">
+                    <Trophy className="h-4 w-4" />
+                    {event.prizeMAD.toLocaleString()} MAD
                   </div>
+                  <Link href={`/${locale}/events/${event.id}`} className="flex items-center gap-1 text-sm t-muted transition-colors hover:t-title">
+                    {t.actions.readMore} <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
                 </div>
               </div>
             );

@@ -62,74 +62,59 @@ export default async function EventPage({
   return (
     <>
       <Header locale={locale} />
-      <main className="flex-grow pt-24 pb-16 bg-gray-50 dark:bg-gray-900 min-h-screen">
+      <main className="min-h-screen flex-grow bg-cream pt-28 pb-20">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <div className="container mx-auto px-4 max-w-4xl">
-          
-          <div className="bg-white dark:bg-gray-950 rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800">
+        <div className="mx-auto max-w-4xl px-6">
+
+          <div className="card card-lift overflow-hidden">
             {event.imagePath && (
-              <div 
-                className="w-full h-64 md:h-96 bg-cover bg-center"
+              <div
+                className="h-64 w-full bg-cover bg-center md:h-96"
                 style={{ backgroundImage: `url(${event.imagePath})` }}
               />
             )}
-            
+
             <div className="p-8 md:p-12">
-              <div className="flex flex-wrap gap-4 mb-6">
-                <span className="bg-[var(--secondary)]/10 text-[var(--secondary)] px-4 py-1.5 rounded-full font-bold">
-                  {event.format}
-                </span>
-              </div>
-              
-              <h1 className="font-heading text-4xl md:text-5xl font-bold mb-6 text-[var(--primary)] dark:text-white">
+              <span className="rounded-full bg-gold px-4 py-1.5 text-sm font-bold text-[#1a140a]">
+                {event.format}
+              </span>
+
+              <h1 className="mt-6 font-display text-4xl font-semibold t-title md:text-5xl">
                 {title}
               </h1>
-              
-              <div className="flex flex-wrap gap-6 mb-10 pb-10 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                  <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-[var(--primary)] dark:text-white">
-                    <Calendar className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="font-medium text-sm">Date</div>
-                    <div className="font-bold">{format(eventDate, 'dd/MM/yyyy')}</div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                  <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-[var(--primary)] dark:text-white">
-                    <Trophy className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="font-medium text-sm">Prize Money</div>
-                    <div className="font-bold text-yellow-600 dark:text-yellow-500">{event.prizeMAD} MAD</div>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                  <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-[var(--primary)] dark:text-white">
-                    <MapPin className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="font-medium text-sm">Lieu</div>
-                    <div className="font-bold">{clubConfig.name}</div>
-                  </div>
-                </div>
+              <div className="mt-8 flex flex-wrap gap-6 border-b hair pb-8">
+                {[
+                  { icon: Calendar, label: 'Date', value: format(eventDate, 'dd/MM/yyyy') },
+                  { icon: Trophy, label: 'Prize money', value: `${event.prizeMAD.toLocaleString()} MAD` },
+                  { icon: MapPin, label: 'Lieu', value: clubConfig.name },
+                ].map((info, i) => {
+                  const Icon = info.icon;
+                  return (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gold/12">
+                        <Icon className="h-5 w-5 t-gold" />
+                      </div>
+                      <div>
+                        <div className="text-xs t-muted">{info.label}</div>
+                        <div className="text-sm font-semibold t-title">{info.value}</div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              <div className="prose prose-lg dark:prose-invert max-w-none mb-12">
-                <p>{description}</p>
-              </div>
+              <p className="mt-8 text-base leading-relaxed t-soft">{description}</p>
 
-              <div className="flex justify-center">
-                <a 
+              <div className="mt-10 flex justify-center">
+                <a
                   href={`https://wa.me/${clubConfig.reservation.value.replace(/[^0-9]/g, '')}?text=Je souhaite m'inscrire au tournoi ${title}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-[var(--primary)] text-white font-bold px-10 py-4 rounded-full text-lg hover:bg-[var(--secondary)] transition-colors"
+                  className="btn-gold px-10 py-4 text-sm"
                 >
                   S'inscrire via WhatsApp
                 </a>

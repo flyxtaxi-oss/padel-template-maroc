@@ -29,6 +29,12 @@ export type Dictionary = {
     legal: string;
     privacy: string;
   };
+  ui: {
+    indoorCourts: string;
+    activeMembers: string;
+    regulatedTemp: string;
+    openEveryday: string;
+  };
 };
 
 const dictionaries: Record<string, Dictionary> = {
@@ -62,6 +68,50 @@ const dictionaries: Record<string, Dictionary> = {
       rights: 'Tous droits réservés.',
       legal: 'Mentions légales',
       privacy: 'Confidentialité',
+    },
+    ui: {
+      indoorCourts: 'Terrains indoor',
+      activeMembers: 'Membres actifs',
+      regulatedTemp: 'Température régulée',
+      openEveryday: 'Ouvert 7j/7',
+    }
+  },
+  en: {
+    navigation: {
+      about: 'About',
+      courts: 'Courts & Pricing',
+      gallery: 'Gallery',
+      contact: 'Contact',
+      events: 'Tournaments',
+    },
+    actions: {
+      book: 'Book now',
+      discover: 'Discover the club',
+      readMore: 'Read more',
+      submit: 'Send request',
+    },
+    booking: {
+      title: 'Book a court',
+      selectDate: 'Choose a date',
+      selectTime: 'Choose a slot',
+      name: 'Your name',
+      phone: 'Phone number',
+      level: 'Level (e.g. Beginner, Intermediate)',
+      players: 'Number of players',
+      confirm: 'Confirm booking',
+      successMessage: 'Your request has been sent successfully.',
+      noSlots: 'No slots available for this date.',
+    },
+    footer: {
+      rights: 'All rights reserved.',
+      legal: 'Legal notice',
+      privacy: 'Privacy',
+    },
+    ui: {
+      indoorCourts: 'Indoor courts',
+      activeMembers: 'Active members',
+      regulatedTemp: 'Regulated temperature',
+      openEveryday: 'Open every day',
     }
   },
   es: {
@@ -94,6 +144,12 @@ const dictionaries: Record<string, Dictionary> = {
       rights: 'Todos los derechos reservados.',
       legal: 'Aviso legal',
       privacy: 'Privacidad',
+    },
+    ui: {
+      indoorCourts: 'Pistas cubiertas',
+      activeMembers: 'Miembros activos',
+      regulatedTemp: 'Temperatura regulada',
+      openEveryday: 'Abierto todos los días',
     }
   },
   ar: {
@@ -126,6 +182,12 @@ const dictionaries: Record<string, Dictionary> = {
       rights: 'جميع الحقوق محفوظة.',
       legal: 'شروط قانونية',
       privacy: 'سياسة الخصوصية',
+    },
+    ui: {
+      indoorCourts: 'ملاعب داخلية',
+      activeMembers: 'أعضاء نشطون',
+      regulatedTemp: 'درجة حرارة منظمة',
+      openEveryday: 'مفتوح كل يوم',
     }
   }
 };
