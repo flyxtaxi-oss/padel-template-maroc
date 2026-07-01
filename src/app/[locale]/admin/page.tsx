@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getBookings } from '@/lib/demoStore';
 import clubConfig from '@/config/club.config';
 import { Lock, Phone, MessageCircle, RefreshCw, CalendarDays, Users, Trophy, LogOut } from 'lucide-react';
 
@@ -40,26 +41,33 @@ export default function AdminPage() {
       setLoading(false);
       return;
     }
-    if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-      setError("Firebase n'est pas configuré (variables NEXT_PUBLIC_FIREBASE_* manquantes).");
-      setLoading(false);
-      return;
+    // Source fiable : stockage local (démo). Alimenté par chaque réservation.
+    const local = getBookings() as Booking[];
+
+    // Source optionnelle : Firestore (si configuré) — non bloquant.
+    let remote: Booking[] = [];
+    if (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+      try {
+        const q = query(collection(db, 'booking_requests'), orderBy('created_at', 'desc'), limit(500));
+        const snap = await Promise.race([
+          getDocs(q),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000)),
+        ]);
+        remote = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }) as Booking)
+          .filter((b) => !b.club_slug || b.club_slug === clubConfig.slug);
+      } catch (err) {
+        console.error('Firestore read error', err);
+      }
     }
-    try {
-      const q = query(collection(db, 'booking_requests'), orderBy('created_at', 'desc'), limit(500));
-      const snap = await Promise.race([
-        getDocs(q),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
-      ]);
-      const rows = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }) as Booking)
-        .filter((b) => !b.club_slug || b.club_slug === clubConfig.slug);
-      setBookings(rows);
-      setAuthed(true);
-    } catch (err) {
-      console.error('admin read error', err);
-      setError('Lecture impossible (Firebase injoignable ou règles Firestore).');
-    }
+
+    // Fusion + dédoublonnage par id + tri antéchronologique
+    const byId = new Map<string, Booking>();
+    [...remote, ...local].forEach((b) => byId.set(b.id, b));
+    const merged = [...byId.values()].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+
+    setBookings(merged);
+    setAuthed(true);
     setLoading(false);
   };
 

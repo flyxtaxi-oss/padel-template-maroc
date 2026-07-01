@@ -6,6 +6,7 @@ import { getDictionary } from '@/i18n/dictionaries';
 import { format, addDays, isSameDay } from 'date-fns';
 import { db } from '@/lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import { saveBooking } from '@/lib/demoStore';
 import { User, Phone, Trophy, Users, Check, ArrowRight } from 'lucide-react';
 
 export default function BookingWidget({ locale }: { locale: string }) {
@@ -72,33 +73,41 @@ export default function BookingWidget({ locale }: { locale: string }) {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const slotDateTime = `${format(selectedDate, 'yyyy-MM-dd')} ${selectedSlot}`;
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const slotDateTime = `${dateStr} ${selectedSlot}`;
     const whatsappMsg = `Bonjour, je souhaite réserver un terrain de padel.\n\nDate: ${slotDateTime}\nNom: ${name}\nTél: ${phone}\nNiveau: ${level}\nJoueurs: ${players}`;
     const waLink = `https://wa.me/${reservation.value.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(whatsappMsg)}`;
 
-    if (bookingMode === 'firebase') {
+    const booking = {
+      id: `b_${Date.now()}`,
+      club_slug: clubConfig.slug,
+      date: dateStr,
+      time_slot: selectedSlot || '',
+      name,
+      phone,
+      level,
+      players: parseInt(players),
+      created_at: new Date().toISOString(),
+    };
+
+    // 1. Enregistrement local instantané (fiable, alimente le tableau de bord)
+    saveBooking(booking);
+
+    // 2. Firestore si (et seulement si) configuré — avec délai max, jamais bloquant
+    if (bookingMode === 'firebase' && process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
       try {
-        await addDoc(collection(db, 'booking_requests'), {
-          club_slug: clubConfig.slug,
-          date: format(selectedDate, 'yyyy-MM-dd'),
-          time_slot: selectedSlot,
-          name,
-          phone,
-          level,
-          players: parseInt(players),
-          created_at: new Date().toISOString()
-        });
-        setIsSuccess(true);
-        setTimeout(() => window.open(waLink, '_blank'), 1500);
+        await Promise.race([
+          addDoc(collection(db, 'booking_requests'), booking),
+          new Promise((resolve) => setTimeout(resolve, 4000)),
+        ]);
       } catch (err) {
-        console.error("Booking error", err);
-        window.open(waLink, '_blank');
+        console.error('Booking Firestore error', err);
       }
-    } else {
-      window.open(waLink, '_blank');
-      setIsSuccess(true);
     }
 
+    // 3. Confirmation + WhatsApp
+    setIsSuccess(true);
+    setTimeout(() => window.open(waLink, '_blank'), 1500);
     setIsSubmitting(false);
   };
 
