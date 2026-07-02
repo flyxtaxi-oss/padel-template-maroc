@@ -22,6 +22,7 @@ export default function Footer({ locale }: { locale: string }) {
     { href: `/${locale}#gallery`, label: t.navigation.gallery },
     { href: `/${locale}#contact`, label: t.navigation.contact },
     { href: `/${locale}/qr`, label: 'QR Code avis' },
+    { href: `/${locale}/admin`, label: 'Espace gérant' },
   ];
 
   return (

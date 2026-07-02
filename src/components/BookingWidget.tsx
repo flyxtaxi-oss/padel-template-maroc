@@ -74,9 +74,6 @@ export default function BookingWidget({ locale }: { locale: string }) {
     setIsSubmitting(true);
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const slotDateTime = `${dateStr} ${selectedSlot}`;
-    const whatsappMsg = `Bonjour, je souhaite réserver un terrain de padel.\n\nDate: ${slotDateTime}\nNom: ${name}\nTél: ${phone}\nNiveau: ${level}\nJoueurs: ${players}`;
-    const waLink = `https://wa.me/${reservation.value.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(whatsappMsg)}`;
 
     const booking = {
       id: `b_${Date.now()}`,
@@ -105,9 +102,8 @@ export default function BookingWidget({ locale }: { locale: string }) {
       }
     }
 
-    // 3. Confirmation + WhatsApp
+    // 3. Confirmation (aucun message auto envoyé — la demande apparaît côté gérant)
     setIsSuccess(true);
-    setTimeout(() => window.open(waLink, '_blank'), 1500);
     setIsSubmitting(false);
   };
 
@@ -125,7 +121,7 @@ export default function BookingWidget({ locale }: { locale: string }) {
           </h2>
           <div className="divider mx-auto mt-5" />
           <p className="mx-auto mt-5 max-w-md text-sm t-muted">
-            Choisissez une date et un créneau, on vous confirme sur WhatsApp.
+            Choisissez une date et un créneau — le club vous confirme rapidement.
           </p>
         </div>
 
@@ -136,7 +132,7 @@ export default function BookingWidget({ locale }: { locale: string }) {
             </div>
             <h3 className="font-display text-2xl font-semibold t-title">Demande envoyée</h3>
             <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed t-soft">{t.booking.successMessage}</p>
-            <div className="mt-6 text-xs t-muted">Redirection vers WhatsApp…</div>
+            <div className="mt-6 text-xs t-muted">Le club vous recontacte rapidement pour confirmer.</div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="card card-lift p-6 sm:p-10">
