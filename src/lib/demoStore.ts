@@ -15,7 +15,18 @@ export type StoredBooking = {
   club_slug: string;
 };
 
+export type StoredFeedback = {
+  id: string;
+  rating: number;
+  comment: string;
+  name: string;
+  phone: string;
+  created_at: string;
+  club_slug: string;
+};
+
 const KEY = 'gp_bookings';
+const FEEDBACK_KEY = 'gp_feedbacks';
 
 export function saveBooking(b: StoredBooking) {
   if (typeof window === 'undefined') return;
@@ -32,6 +43,26 @@ export function getBookings(): StoredBooking[] {
   if (typeof window === 'undefined') return [];
   try {
     return JSON.parse(window.localStorage.getItem(KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+export function saveFeedback(f: StoredFeedback) {
+  if (typeof window === 'undefined') return;
+  try {
+    const all = getFeedbacks();
+    all.unshift(f);
+    window.localStorage.setItem(FEEDBACK_KEY, JSON.stringify(all.slice(0, 500)));
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+export function getFeedbacks(): StoredFeedback[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(window.localStorage.getItem(FEEDBACK_KEY) || '[]');
   } catch {
     return [];
   }

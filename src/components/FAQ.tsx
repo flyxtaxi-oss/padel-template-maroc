@@ -1,7 +1,9 @@
 import clubConfig from '@/config/club.config';
+import { getDictionary } from '@/i18n/dictionaries';
 import { ChevronDown } from 'lucide-react';
 
 export default function FAQ({ locale }: { locale: string }) {
+  const t = getDictionary(locale);
   const { faq } = clubConfig;
   if (!faq || faq.length === 0) return null;
 
@@ -9,9 +11,9 @@ export default function FAQ({ locale }: { locale: string }) {
     <section id="faq" className="section bg-sand">
       <div className="mx-auto max-w-3xl px-6">
         <div className="mb-12 text-center" data-reveal>
-          <span className="eyebrow">FAQ</span>
+          <span className="eyebrow">{t.sections.faqEyebrow}</span>
           <h2 className="mt-4 font-display text-3xl font-semibold t-title sm:text-4xl">
-            Questions <span className="italic t-gold">fréquentes</span>
+            {t.sections.faqTitle} <span className="italic t-gold">{t.sections.faqTitleAccent}</span>
           </h2>
           <div className="divider mx-auto mt-5" />
         </div>

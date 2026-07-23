@@ -20,9 +20,9 @@ export default function CourtsPricing({ locale }: { locale: string }) {
       <div className="mx-auto max-w-7xl px-6">
 
         <div className="mb-14 max-w-2xl" data-reveal>
-          <span className="eyebrow">Les installations</span>
+          <span className="eyebrow">{t.sections.courtsEyebrow}</span>
           <h2 className="mt-4 font-display text-3xl font-semibold t-title sm:text-[2.6rem]">
-            Terrains & <span className="italic t-gold">tarifs</span>
+            {t.sections.courtsTitle} <span className="italic t-gold">{t.sections.courtsTitleAccent}</span>
           </h2>
           <div className="divider mt-5" />
         </div>
@@ -36,7 +36,7 @@ export default function CourtsPricing({ locale }: { locale: string }) {
                 <div>
                   <div className="font-display text-6xl font-semibold text-gold-bright">{courts.length}</div>
                   <div className="mt-1 text-lg font-semibold text-cream">Mondo Supercourt</div>
-                  <div className="mt-1 text-sm text-cream/70">Terrains indoor panoramiques homologués WPT</div>
+                  <div className="mt-1 text-sm text-cream/70">{t.sections.courtsCaption}</div>
                 </div>
               </div>
             </div>
@@ -58,7 +58,7 @@ export default function CourtsPricing({ locale }: { locale: string }) {
           </div>
 
           <div className="space-y-4 lg:col-span-5" data-reveal style={{ '--reveal-delay': '120ms' } as React.CSSProperties}>
-            <h3 className="text-sm font-semibold t-muted">Grille des tarifs</h3>
+            <h3 className="text-sm font-semibold t-muted">{t.sections.pricingGrid}</h3>
 
             {pricing.map((item, idx) => {
               const label = item.label[locale] || item.label[clubConfig.defaultLocale] || '';

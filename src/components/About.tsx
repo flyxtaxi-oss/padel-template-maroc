@@ -24,14 +24,14 @@ export default function About({ locale }: { locale: string }) {
             </div>
             <div className="absolute -bottom-5 -right-4 rounded-2xl bg-court px-6 py-4 card-lift sm:-right-5">
               <div className="font-mono text-3xl font-bold text-gold-bright">{about.stats.established}</div>
-              <div className="mt-0.5 text-xs text-cream/70">Fondation du club</div>
+              <div className="mt-0.5 text-xs text-cream/70">{t.sections.founded}</div>
             </div>
           </div>
 
           <div data-reveal style={{ '--reveal-delay': '120ms' } as React.CSSProperties}>
-            <span className="eyebrow">L'histoire</span>
+            <span className="eyebrow">{t.sections.aboutEyebrow}</span>
             <h2 className="mt-4 font-display text-3xl font-semibold t-title sm:text-[2.6rem] sm:leading-tight">
-              Le padel, <span className="italic t-gold">autrement</span>
+              {t.sections.aboutTitle} <span className="italic t-gold">{t.sections.aboutTitleAccent}</span>
             </h2>
             <div className="divider mt-5" />
             <p className="mt-6 max-w-xl text-base leading-relaxed t-soft">{localText}</p>

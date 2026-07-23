@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 import "../globals.css";
 import clubConfig from "@/config/club.config";
+import { SITE_URL } from "@/lib/site";
+import { getOpeningRange } from "@/lib/schedule";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -28,21 +30,39 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const title = `${clubConfig.name} - ${clubConfig.tagline[locale] || clubConfig.tagline[clubConfig.defaultLocale]}`;
   const description = clubConfig.about.text[locale]?.slice(0, 160) || clubConfig.about.text[clubConfig.defaultLocale].slice(0, 160);
   
+  const languages = clubConfig.locales.reduce((acc, loc) => {
+    acc[loc] = `/${loc}`;
+    return acc;
+  }, {} as Record<string, string>);
+  // x-default : la version servie quand aucune langue du visiteur ne correspond.
+  languages['x-default'] = `/${clubConfig.defaultLocale}`;
+
   return {
+    // metadataBase rend canonical/hreflang/OG absolus — sans lui, Next émet des
+    // URLs relatives que Google interprète mal.
+    metadataBase: new URL(SITE_URL),
     title,
     description,
+    keywords: ['padel Tanger', 'club de padel', 'terrain padel indoor', 'réservation padel Tanger', 'Golden Padel Club'],
     openGraph: {
-      title: clubConfig.name,
+      type: 'website',
+      siteName: clubConfig.name,
+      locale,
+      url: `${SITE_URL}/${locale}`,
+      title,
       description,
-      images: [{ url: clubConfig.hero.mediaPath }],
+      images: [{ url: clubConfig.hero.mediaPath, width: 1200, height: 630, alt: clubConfig.name }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [clubConfig.hero.mediaPath],
     },
     alternates: {
       canonical: `/${locale}`,
-      languages: clubConfig.locales.reduce((acc, loc) => {
-        acc[loc] = `/${loc}`;
-        return acc;
-      }, {} as Record<string, string>)
-    }
+      languages,
+    },
   };
 }
 
@@ -57,19 +77,35 @@ export default async function RootLayout({
   const locale = clubConfig.locales.includes(resolvedParams.locale) ? resolvedParams.locale : clubConfig.defaultLocale;
   const isRtl = locale === 'ar';
 
+  // Horaires : schema.org attend des jours en anglais, pas la clé française
+  // « Tous les jours » (qui était invalide et ignorée par Google).
+  const ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const { open, close } = getOpeningRange();
+  const fmt = (mins: number) => `${String(Math.floor(mins / 60) % 24).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+
+  const prices = clubConfig.pricing.map((p) => p.price);
+  const priceRange = prices.length
+    ? `${Math.min(...prices)}–${Math.max(...prices)} MAD`
+    : 'MAD';
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": ["SportsActivityLocation", "LocalBusiness"],
-        "@id": `${clubConfig.name.replace(/\s+/g, '-').toLowerCase()}-business`,
+        "@id": `${SITE_URL}/#business`,
         name: clubConfig.name,
-        image: clubConfig.hero.mediaPath,
-        url: "", 
+        description: clubConfig.about.text[locale] || clubConfig.about.text[clubConfig.defaultLocale],
+        image: `${SITE_URL}${clubConfig.hero.mediaPath}`,
+        url: `${SITE_URL}/${locale}`,
         telephone: clubConfig.contact.phone,
+        currenciesAccepted: "MAD",
         address: {
           "@type": "PostalAddress",
-          streetAddress: clubConfig.contact.address,
+          streetAddress: "Marjane, Route de Rabat",
+          addressLocality: "Tanger",
+          postalCode: "90000",
+          addressRegion: "Tanger-Tétouan-Al Hoceïma",
           addressCountry: "MA"
         },
         geo: {
@@ -77,14 +113,19 @@ export default async function RootLayout({
           latitude: clubConfig.contact.lat,
           longitude: clubConfig.contact.lng
         },
-        openingHoursSpecification: Object.entries(clubConfig.openingHours).map(([days, hours]) => ({
+        openingHoursSpecification: [{
           "@type": "OpeningHoursSpecification",
-          dayOfWeek: days,
-          opens: hours.split(' - ')[0],
-          closes: hours.split(' - ')[1]
-        })),
-        priceRange: "MAD",
-        sameAs: [clubConfig.contact.instagram]
+          dayOfWeek: ALL_DAYS,
+          opens: fmt(open),
+          closes: fmt(close)
+        }],
+        priceRange,
+        sport: "Padel",
+        sameAs: [clubConfig.contact.instagram],
+        potentialAction: {
+          "@type": "ReserveAction",
+          target: `${SITE_URL}/${locale}#booking`
+        }
       },
       ...(clubConfig.faq && clubConfig.faq.length > 0 ? [{
         "@type": "FAQPage",

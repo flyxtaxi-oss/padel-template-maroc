@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Sortie du build Vercel : code généré/minifié, jamais à linter.
+    // Sans cet ignore, `npm run lint` remonte des dizaines de fausses erreurs.
+    ".vercel/**",
+    "seo-output/**",
   ]),
 ]);
 

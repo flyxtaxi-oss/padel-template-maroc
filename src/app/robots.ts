@@ -1,13 +1,17 @@
 import { MetadataRoute } from 'next';
+import { SITE_URL, LOCALES } from '@/lib/site';
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://padel-template.vercel.app';
+  // Outils internes du gérant : jamais indexés, jamais découvrables via Google.
+  const internal = LOCALES.flatMap((l) => [`/${l}/admin`, `/${l}/qr`]);
 
   return {
     rules: {
       userAgent: '*',
       allow: '/',
+      disallow: internal,
     },
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    host: SITE_URL,
   };
 }

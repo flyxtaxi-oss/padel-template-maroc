@@ -1,16 +1,21 @@
 import { MetadataRoute } from 'next';
-import clubConfig from '@/config/club.config';
+import { SITE_URL, LOCALES, PUBLIC_PATHS } from '@/lib/site';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  // In a real application, you would replace this with the actual deployed URL
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://padel-template.vercel.app';
+  const lastModified = new Date();
 
-  return [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 1,
-    },
-  ];
+  return PUBLIC_PATHS.flatMap((path) =>
+    LOCALES.map((locale) => ({
+      url: `${SITE_URL}/${locale}${path}`,
+      lastModified,
+      changeFrequency: (path === '' ? 'weekly' : 'yearly') as 'weekly' | 'yearly',
+      priority: path === '' ? (locale === 'fr' ? 1 : 0.8) : 0.3,
+      // hreflang : chaque URL déclare ses équivalents dans les autres langues.
+      alternates: {
+        languages: Object.fromEntries(
+          LOCALES.map((l) => [l, `${SITE_URL}/${l}${path}`]),
+        ),
+      },
+    })),
+  );
 }

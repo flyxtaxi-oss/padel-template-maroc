@@ -5,17 +5,24 @@ import { useParams } from 'next/navigation';
 import { format, parseISO, isValid, subDays, addDays } from 'date-fns';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getBookings, saveBooking, type StoredBooking } from '@/lib/demoStore';
+import { getBookings, saveBooking, type StoredBooking, getFeedbacks, saveFeedback, type StoredFeedback } from '@/lib/demoStore';
 import clubConfig from '@/config/club.config';
 import QRCode from 'react-qr-code';
+import { motion } from 'framer-motion';
 import {
   Lock, Phone, MessageCircle, RefreshCw, CalendarDays, Users, Trophy, LogOut,
-  Eye, Banknote, TrendingUp, Globe, Search, Zap, Sparkles, QrCode as QrIcon, Bell,
+  Eye, Banknote, TrendingUp, Globe, Search, Zap, Sparkles, QrCode as QrIcon, Bell, Star,
 } from 'lucide-react';
 
-// Code d'accès (optionnel) : NEXT_PUBLIC_ADMIN_CODE dans .env.local.
-// Sans code configuré, le tableau s'ouvre directement (mode démo).
-const ADMIN_CODE = process.env.NEXT_PUBLIC_ADMIN_CODE || '';
+// Code d'accès. Surchargeable via NEXT_PUBLIC_ADMIN_CODE dans .env.local /
+// les variables d'environnement Vercel.
+//
+// ⚠️ Ce code est un garde-fou, PAS une authentification : étant préfixé
+// NEXT_PUBLIC_, il est présent dans le bundle client et reste lisible par
+// quelqu'un qui inspecte le JavaScript. Il empêche l'accès accidentel
+// (visiteur, client, moteur de recherche), pas un accès déterminé.
+// Pour une vraie protection : Firebase Auth ou Vercel Password Protection.
+const ADMIN_CODE = process.env.NEXT_PUBLIC_ADMIN_CODE || 'golden2026';
 
 const PRICE_MAD = clubConfig.pricing[0]?.price ?? 240;
 
@@ -70,6 +77,26 @@ function seedDemoBookings() {
   });
 }
 
+function seedDemoFeedbacks() {
+  const now = Date.now();
+  const demoFeedbacks: Array<[string, string, number, number]> = [
+    ['Mehdi K.', 'Le terrain 3 glissait un peu hier soir. Sinon super installations.', 3, 1],
+    ['Yasmine T.', "Dommage qu'il n'y ait pas de douches individuelles fermées dans le vestiaire des femmes.", 3, 2],
+    ['Karim B.', 'Impossible de se garer facilement à 19h, le parking du Marjane était bondé.', 2, 3],
+  ];
+  demoFeedbacks.forEach(([name, comment, rating, hourDiff]) => {
+    saveFeedback({
+      id: `demo_fb_${now}_${hourDiff}`,
+      rating,
+      comment,
+      name,
+      phone: '+2126' + Math.floor(10000000 + Math.random() * 90000000),
+      created_at: new Date(now - hourDiff * 3.5 * 60 * 60 * 1000).toISOString(),
+      club_slug: clubConfig.slug,
+    });
+  });
+}
+
 export default function AdminPage() {
   const params = useParams<{ locale: string }>();
   const locale = params?.locale || 'fr';
@@ -77,6 +104,8 @@ export default function AdminPage() {
   const [code, setCode] = useState('');
   const [authed, setAuthed] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [feedbacks, setFeedbacks] = useState<StoredFeedback[]>([]);
+  const [activeTab, setActiveTab] = useState<'bookings' | 'feedbacks'>('bookings');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [origin, setOrigin] = useState('');
@@ -113,7 +142,30 @@ export default function AdminPage() {
     [...remote, ...local].forEach((b) => byId.set(b.id, b));
     const merged = [...byId.values()].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
 
+    // Charger les retours clients (gating avis)
+    const localFeedbacks = getFeedbacks() as StoredFeedback[];
+    let remoteFeedbacks: StoredFeedback[] = [];
+    if (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+      try {
+        const q = query(collection(db, 'feedbacks'), orderBy('created_at', 'desc'), limit(500));
+        const snap = await Promise.race([
+          getDocs(q),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000)),
+        ]);
+        remoteFeedbacks = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }) as StoredFeedback)
+          .filter((f) => !f.club_slug || f.club_slug === clubConfig.slug);
+      } catch (err) {
+        console.error('Firestore read error (feedbacks)', err);
+      }
+    }
+
+    const fbById = new Map<string, StoredFeedback>();
+    [...remoteFeedbacks, ...localFeedbacks].forEach((f) => fbById.set(f.id, f));
+    const mergedFeedbacks = [...fbById.values()].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+
     setBookings(merged);
+    setFeedbacks(mergedFeedbacks);
     setAuthed(true);
     setLoading(false);
   }, []);
@@ -228,7 +280,7 @@ export default function AdminPage() {
             <p className="mt-1 text-sm t-muted">Golden Padel Club — vue d'ensemble en direct</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => { seedDemoBookings(); load(code); }} className="btn-outline px-4 py-2.5 text-sm font-medium">
+            <button onClick={() => { seedDemoBookings(); seedDemoFeedbacks(); load(code); }} className="btn-outline px-4 py-2.5 text-sm font-medium cursor-pointer">
               <Sparkles className="h-4 w-4" />
               Données de démo
             </button>
@@ -376,47 +428,130 @@ export default function AdminPage() {
           </div>
 
           <div className="lg:col-span-2">
-            <h2 className="mb-3 font-display text-lg font-semibold t-title">Toutes les réservations</h2>
-            {bookings.length === 0 ? (
-              <div className="card card-lift p-10 text-center">
-                <p className="text-sm t-muted">Aucune réservation. Cliquez « Données de démo » ou réservez depuis le site.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {bookings.slice(0, 30).map((b) => {
-                  const created = b.created_at && isValid(parseISO(b.created_at)) ? parseISO(b.created_at) : null;
-                  const phoneDigits = (b.phone || '').replace(/[^0-9]/g, '');
-                  return (
-                    <div key={b.id} className="card card-lift flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gold font-semibold text-[#1a140a]">
-                          {(b.name || '?').charAt(0).toUpperCase()}
+            <div className="mb-5 border-b hair flex gap-6">
+              <button
+                type="button"
+                onClick={() => setActiveTab('bookings')}
+                className={`pb-2 text-base font-semibold transition-colors relative cursor-pointer ${
+                  activeTab === 'bookings' ? 't-title text-gold' : 't-muted hover:t-title'
+                }`}
+              >
+                Réservations ({bookings.length})
+                {activeTab === 'bookings' && (
+                  <motion.div layoutId="admin-active-tab" className="absolute bottom-0 inset-x-0 h-0.5 bg-gold" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('feedbacks')}
+                className={`pb-2 text-base font-semibold transition-colors relative cursor-pointer ${
+                  activeTab === 'feedbacks' ? 't-title text-gold' : 't-muted hover:t-title'
+                }`}
+              >
+                Retours clients ({feedbacks.length})
+                {activeTab === 'feedbacks' && (
+                  <motion.div layoutId="admin-active-tab" className="absolute bottom-0 inset-x-0 h-0.5 bg-gold" />
+                )}
+              </button>
+            </div>
+
+            {activeTab === 'bookings' ? (
+              bookings.length === 0 ? (
+                <div className="card card-lift p-10 text-center">
+                  <p className="text-sm t-muted">Aucune réservation. Cliquez « Données de démo » ou réservez depuis le site.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {bookings.slice(0, 30).map((b) => {
+                    const created = b.created_at && isValid(parseISO(b.created_at)) ? parseISO(b.created_at) : null;
+                    const phoneDigits = (b.phone || '').replace(/[^0-9]/g, '');
+                    return (
+                      <div key={b.id} className="card card-lift flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gold font-semibold text-[#1a140a]">
+                            {(b.name || '?').charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold t-title">{b.name || '—'}</div>
+                            <div className="text-xs t-muted">{b.phone || '—'}{created ? ` · reçu ${format(created, 'dd/MM HH:mm')}` : ''}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-sm font-semibold t-title">{b.name || '—'}</div>
-                          <div className="text-xs t-muted">{b.phone || '—'}{created ? ` · reçu ${format(created, 'dd/MM HH:mm')}` : ''}</div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="font-mono font-semibold t-title">{b.date} · {b.time_slot}</span>
+                          <span className="t-muted">{b.players ?? '—'} j.</span>
+                          <div className="flex gap-1.5">
+                            {phoneDigits && (
+                              <>
+                                <a href={`https://wa.me/${phoneDigits}`} target="_blank" rel="noopener noreferrer" className="btn-outline px-2.5 py-1.5 text-xs" aria-label="WhatsApp">
+                                  <MessageCircle className="h-3.5 w-3.5" />
+                                </a>
+                                <a href={`tel:${b.phone}`} className="btn-outline px-2.5 py-1.5 text-xs" aria-label="Appeler">
+                                  <Phone className="h-3.5 w-3.5" />
+                                </a>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 text-sm">
-                        <span className="font-mono font-semibold t-title">{b.date} · {b.time_slot}</span>
-                        <span className="t-muted">{b.players ?? '—'} j.</span>
-                        <div className="flex gap-1.5">
-                          {phoneDigits && (
-                            <>
+                    );
+                  })}
+                </div>
+              )
+            ) : (
+              feedbacks.length === 0 ? (
+                <div className="card card-lift p-10 text-center">
+                  <p className="text-sm t-muted">Aucun retour client enregistré. Scannez le QR code avis et laissez une note de 1 à 3 pour tester.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {feedbacks.slice(0, 50).map((f) => {
+                    const created = f.created_at && isValid(parseISO(f.created_at)) ? parseISO(f.created_at) : null;
+                    const phoneDigits = (f.phone || '').replace(/[^0-9]/g, '');
+                    return (
+                      <div key={f.id} className="card card-lift flex flex-col gap-3.5 p-5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gold/12 font-semibold t-gold">
+                              {(f.name || '?').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="text-sm font-semibold t-title flex items-center gap-2.5">
+                                {f.name}
+                                <span className="flex items-center gap-0.5 text-gold bg-gold/5 px-2.5 py-0.5 rounded-full border border-gold/10">
+                                  {Array.from({ length: 5 }).map((_, idx) => (
+                                    <Star
+                                      key={idx}
+                                      className={`h-3 w-3 ${
+                                        idx < f.rating ? 'fill-gold text-gold' : 'text-gray-300'
+                                      }`}
+                                    />
+                                  ))}
+                                </span>
+                              </div>
+                              <div className="text-xs t-muted">
+                                {f.phone}{created ? ` · reçu ${format(created, 'dd/MM HH:mm')}` : ''}
+                              </div>
+                            </div>
+                          </div>
+                          {phoneDigits && f.phone !== 'Non renseigné' && (
+                            <div className="flex gap-1.5">
                               <a href={`https://wa.me/${phoneDigits}`} target="_blank" rel="noopener noreferrer" className="btn-outline px-2.5 py-1.5 text-xs" aria-label="WhatsApp">
                                 <MessageCircle className="h-3.5 w-3.5" />
                               </a>
-                              <a href={`tel:${b.phone}`} className="btn-outline px-2.5 py-1.5 text-xs" aria-label="Appeler">
+                              <a href={`tel:${f.phone}`} className="btn-outline px-2.5 py-1.5 text-xs" aria-label="Appeler">
                                 <Phone className="h-3.5 w-3.5" />
                               </a>
-                            </>
+                            </div>
                           )}
                         </div>
+                        <p className="text-sm t-soft bg-sand/30 p-4 rounded-xl border border-[#1e1b14]/5 italic">
+                          "{f.comment}"
+                        </p>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )
             )}
           </div>
         </div>

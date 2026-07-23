@@ -27,6 +27,18 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    match /feedbacks/{docId} {
+      // Création autorisée depuis le site pour recueillir les avis.
+      allow create: if
+        request.resource.data.rating is int &&
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5 &&
+        request.resource.data.club_slug is string;
+
+      // Aucune lecture / modification / suppression côté client.
+      allow read, update, delete: if false;
+    }
+
     // Tout le reste est fermé par défaut.
     match /{document=**} {
       allow read, write: if false;

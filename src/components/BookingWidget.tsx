@@ -1,17 +1,44 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import clubConfig from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
-import { format, addDays, isSameDay } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import type { Locale } from 'date-fns';
+import { fr as frLocale, enUS, es as esLocale, ar as arLocale } from 'date-fns/locale';
 import { db } from '@/lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { saveBooking } from '@/lib/demoStore';
+import { getClubNow, addDaysStr, getSlotsForDate } from '@/lib/schedule';
 import { User, Phone, Trophy, Users, Check, ArrowRight } from 'lucide-react';
+
+const dateLocales: Record<string, Locale> = { fr: frLocale, en: enUS, es: esLocale, ar: arLocale };
 
 export default function BookingWidget({ locale }: { locale: string }) {
   const t = getDictionary(locale);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const dateLocale = dateLocales[locale] || frLocale;
+
+  // Heure du club (Tanger) figée au premier rendu : identique côté serveur et
+  // côté client, donc pas de désynchronisation d'hydratation.
+  const [clubNow] = useState(() => getClubNow());
+
+  // 7 jours à partir d'aujourd'hui, en chaînes 'yyyy-MM-dd' (aucune ambiguïté de fuseau).
+  const upcomingDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDaysStr(clubNow.dateStr, i)),
+    [clubNow.dateStr],
+  );
+
+  // Créneaux précalculés pour les 7 jours : permet d'ouvrir par défaut sur le
+  // premier jour qui a réellement de la disponibilité (le soir, « aujourd'hui »
+  // est vide — on ne veut pas accueillir le visiteur sur une section vide).
+  const slotsByDay = useMemo(
+    () => Object.fromEntries(upcomingDays.map((d) => [d, getSlotsForDate(d, clubNow)])),
+    [upcomingDays, clubNow],
+  );
+
+  const [selectedDate, setSelectedDate] = useState<string>(
+    () => upcomingDays.find((d) => slotsByDay[d].length > 0) ?? upcomingDays[0],
+  );
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
   const [name, setName] = useState('');
@@ -22,13 +49,13 @@ export default function BookingWidget({ locale }: { locale: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const { bookingMode, reservation, slotDurationMinutes, bookedSlots } = clubConfig;
+  const { bookingMode, reservation } = clubConfig;
 
   if (bookingMode === 'external') {
     return (
       <section id="booking" className="section bg-cream text-center">
         <div className="mx-auto max-w-3xl px-6">
-          <span className="eyebrow">Réservations</span>
+          <span className="eyebrow">{t.sections.bookingEyebrow}</span>
           <h2 className="mt-4 font-display text-3xl font-semibold t-title sm:text-4xl">{t.booking.title}</h2>
           <div className="divider mx-auto mt-5" />
           <a href={reservation.value} target="_blank" rel="noopener noreferrer" className="btn-gold mt-10 px-10 py-4 text-sm">
@@ -39,41 +66,13 @@ export default function BookingWidget({ locale }: { locale: string }) {
     );
   }
 
-  const upcomingDays = Array.from({ length: 7 }).map((_, i) => addDays(new Date(), i));
-
-  const generateSlots = (date: Date) => {
-    const slots = [];
-    const startHour = 8;
-    const endHour = 22;
-    let currentHour = startHour;
-    let currentMinute = 0;
-
-    while (currentHour < endHour) {
-      const timeString = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
-      const slotIso = `${format(date, 'yyyy-MM-dd')}T${timeString}`;
-
-      if (isSameDay(date, new Date()) && currentHour < new Date().getHours()) {
-        // Skip past slots
-      } else if (!bookedSlots.includes(slotIso)) {
-        slots.push(timeString);
-      }
-
-      currentMinute += slotDurationMinutes;
-      if (currentMinute >= 60) {
-        currentHour += Math.floor(currentMinute / 60);
-        currentMinute = currentMinute % 60;
-      }
-    }
-    return slots;
-  };
-
-  const slotsForSelectedDate = generateSlots(selectedDate);
+  const slotsForSelectedDate = slotsByDay[selectedDate] ?? [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const dateStr = selectedDate;
 
     const booking = {
       id: `b_${Date.now()}`,
@@ -115,13 +114,13 @@ export default function BookingWidget({ locale }: { locale: string }) {
     <section id="booking" className="section bg-cream">
       <div className="mx-auto max-w-3xl px-6">
         <div className="mb-12 text-center" data-reveal>
-          <span className="eyebrow">Réservations</span>
+          <span className="eyebrow">{t.sections.bookingEyebrow}</span>
           <h2 className="mt-4 font-display text-3xl font-semibold t-title sm:text-4xl">
-            Réserver un <span className="italic t-gold">terrain</span>
+            {t.sections.bookingTitle} <span className="italic t-gold">{t.sections.bookingTitleAccent}</span>
           </h2>
           <div className="divider mx-auto mt-5" />
           <p className="mx-auto mt-5 max-w-md text-sm t-muted">
-            Choisissez une date et un créneau — le club vous confirme rapidement.
+            {t.sections.bookingSubtitle}
           </p>
         </div>
 
@@ -130,9 +129,9 @@ export default function BookingWidget({ locale }: { locale: string }) {
             <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gold/15">
               <Check className="h-7 w-7 t-gold" />
             </div>
-            <h3 className="font-display text-2xl font-semibold t-title">Demande envoyée</h3>
+            <h3 className="font-display text-2xl font-semibold t-title">{t.sections.bookingSuccessTitle}</h3>
             <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed t-soft">{t.booking.successMessage}</p>
-            <div className="mt-6 text-xs t-muted">Le club vous recontacte rapidement pour confirmer.</div>
+            <div className="mt-6 text-xs t-muted">{t.sections.bookingSuccessNote}</div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="card card-lift p-6 sm:p-10">
@@ -140,21 +139,26 @@ export default function BookingWidget({ locale }: { locale: string }) {
             <div className="mb-9">
               <h3 className={stepLabel}><span className={stepNumber}>1</span>{t.booking.selectDate}</h3>
               <div className="mt-5 flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
-                {upcomingDays.map((date, i) => {
-                  const isSelected = isSameDay(date, selectedDate);
+                {upcomingDays.map((dateStr) => {
+                  const isSelected = dateStr === selectedDate;
+                  const isFull = (slotsByDay[dateStr] ?? []).length === 0;
+                  const day = parseISO(dateStr);
                   return (
                     <button
-                      key={i}
+                      key={dateStr}
                       type="button"
-                      onClick={() => { setSelectedDate(date); setSelectedSlot(null); }}
+                      disabled={isFull}
+                      onClick={() => { setSelectedDate(dateStr); setSelectedSlot(null); }}
                       className={`flex h-20 w-16 flex-shrink-0 flex-col items-center justify-center rounded-xl border transition-colors ${
                         isSelected
                           ? 'border-gold bg-gold/12 t-gold'
-                          : 'border-[#1e1b14]/12 bg-white t-soft hover:border-gold/40'
+                          : isFull
+                            ? 'cursor-not-allowed border-[#1e1b14]/8 bg-[#1e1b14]/[0.03] text-[#1e1b14]/30'
+                            : 'border-[#1e1b14]/12 bg-white t-soft hover:border-gold/40'
                       }`}
                     >
-                      <span className="text-xs font-medium uppercase">{format(date, 'eee')}</span>
-                      <span className="mt-1 font-mono text-xl font-bold">{format(date, 'dd')}</span>
+                      <span className="text-xs font-medium uppercase">{format(day, 'eee', { locale: dateLocale })}</span>
+                      <span className="mt-1 font-mono text-xl font-bold">{format(day, 'dd')}</span>
                     </button>
                   );
                 })}
@@ -190,11 +194,11 @@ export default function BookingWidget({ locale }: { locale: string }) {
 
             {selectedSlot && (
               <div className="animate-fade-up space-y-7 border-t hair pt-8">
-                <h3 className={stepLabel}><span className={stepNumber}>3</span>Compléter la réservation</h3>
+                <h3 className={stepLabel}><span className={stepNumber}>3</span>{t.sections.bookingStep3}</h3>
 
                 <div className="grid gap-5 md:grid-cols-2">
                   <div>
-                    <label className="mb-2 block text-xs font-medium t-muted">Nom complet</label>
+                    <label className="mb-2 block text-xs font-medium t-muted">{t.sections.fieldName}</label>
                     <div className="relative">
                       <input required type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ex : Yassine Belghiti" className={inputBase} />
                       <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1e1b14]/35" />
@@ -202,7 +206,7 @@ export default function BookingWidget({ locale }: { locale: string }) {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-xs font-medium t-muted">Numéro de téléphone</label>
+                    <label className="mb-2 block text-xs font-medium t-muted">{t.sections.fieldPhone}</label>
                     <div className="relative">
                       <input required type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Ex : +212612345678" className={inputBase} />
                       <Phone className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1e1b14]/35" />
@@ -210,7 +214,7 @@ export default function BookingWidget({ locale }: { locale: string }) {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-xs font-medium t-muted">Votre niveau</label>
+                    <label className="mb-2 block text-xs font-medium t-muted">{t.sections.fieldLevel}</label>
                     <div className="relative">
                       <input required type="text" value={level} onChange={e => setLevel(e.target.value)} placeholder="Ex : Intermédiaire (niveau 3)" className={inputBase} />
                       <Trophy className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1e1b14]/35" />
@@ -218,12 +222,12 @@ export default function BookingWidget({ locale }: { locale: string }) {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-xs font-medium t-muted">Nombre de joueurs</label>
+                    <label className="mb-2 block text-xs font-medium t-muted">{t.sections.fieldPlayers}</label>
                     <div className="relative">
                       <select value={players} onChange={e => setPlayers(e.target.value)} className={`${inputBase} appearance-none`}>
-                        <option value="2">2 joueurs</option>
-                        <option value="3">3 joueurs</option>
-                        <option value="4">4 joueurs (standard)</option>
+                        <option value="2">2 {t.sections.playersUnit}</option>
+                        <option value="3">3 {t.sections.playersUnit}</option>
+                        <option value="4">4 {t.sections.playersUnit} ({t.sections.playersStandard})</option>
                       </select>
                       <Users className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1e1b14]/35" />
                     </div>

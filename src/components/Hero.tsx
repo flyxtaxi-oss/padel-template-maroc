@@ -33,7 +33,7 @@ export default function Hero({ locale }: { locale: string }) {
         <div className="animate-fade-up">
           <span className="eyebrow">
             <span className="h-1.5 w-1.5 rounded-full bg-gold-bright" />
-            Padel premium · Tanger
+            {t.sections.heroEyebrow}
           </span>
 
           <h1 className="mt-6 font-display text-5xl font-semibold leading-[1.04] t-title sm:text-6xl xl:text-[4.6rem]">

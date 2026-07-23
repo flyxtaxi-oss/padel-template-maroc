@@ -3,19 +3,26 @@ import { useState, useEffect } from 'react';
 import clubConfig from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import Link from 'next/link';
+import LogoMark from '@/components/LogoMark';
 import { Menu, X } from 'lucide-react';
 
-export default function Header({ locale }: { locale: string }) {
+// `solid` : header opaque dès le chargement. Indispensable sur les pages sans
+// hero sombre (mentions légales, confidentialité) — sinon le texte clair du
+// header s'affiche sur le fond ivoire de la page et devient illisible.
+export default function Header({ locale, solid = false }: { locale: string; solid?: boolean }) {
   const t = getDictionary(locale);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
+    if (solid) return;
     const onScroll = () => setScrolled(window.scrollY > 40);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [solid]);
+
+  const onLight = solid || scrolled;
 
   const navLinks = [
     { href: `/${locale}#about`, label: t.navigation.about },
@@ -26,21 +33,19 @@ export default function Header({ locale }: { locale: string }) {
   ];
 
   // light text over the dark hero; ink text once the cream bar appears
-  const link = scrolled ? 'text-[#1e1b14]/65 hover:text-[#1e1b14]' : 'text-cream/75 hover:text-cream';
-  const brandInk = scrolled ? 'text-[#1e1b14]' : 'text-cream';
+  const link = onLight ? 'text-[#1e1b14]/65 hover:text-[#1e1b14]' : 'text-cream/75 hover:text-cream';
+  const brandInk = onLight ? 'text-[#1e1b14]' : 'text-cream';
 
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
-        scrolled ? 'border-b border-[#1e1b14]/10 bg-cream/85 backdrop-blur-xl' : 'border-b border-transparent'
+        onLight ? 'border-b border-[#1e1b14]/10 bg-cream/85 backdrop-blur-xl' : 'border-b border-transparent'
       }`}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
 
         <Link href={`/${locale}`} className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold font-display text-base font-semibold text-[#1a140a]">
-            G
-          </div>
+          <LogoMark className="h-8 w-8" />
           <span className={`font-display text-lg font-semibold transition-colors ${brandInk}`}>
             Golden <span className="text-gold">Padel</span>
           </span>
@@ -55,13 +60,13 @@ export default function Header({ locale }: { locale: string }) {
         </nav>
 
         <div className="flex items-center gap-3">
-          <div className={`hidden items-center gap-1 rounded-full border p-1 sm:flex ${scrolled ? 'border-[#1e1b14]/15' : 'border-cream/25'}`}>
+          <div className={`hidden items-center gap-1 rounded-full border p-1 sm:flex ${onLight ? 'border-[#1e1b14]/15' : 'border-cream/25'}`}>
             {clubConfig.locales.map(loc => (
               <Link
                 key={loc}
                 href={`/${loc}`}
                 className={`rounded-full px-2.5 py-1 text-xs font-semibold uppercase transition-colors ${
-                  loc === locale ? 'bg-gold text-[#1a140a]' : scrolled ? 'text-[#1e1b14]/50 hover:text-[#1e1b14]' : 'text-cream/55 hover:text-cream'
+                  loc === locale ? 'bg-gold text-[#1a140a]' : onLight ? 'text-[#1e1b14]/50 hover:text-[#1e1b14]' : 'text-cream/55 hover:text-cream'
                 }`}
               >
                 {loc}
@@ -74,7 +79,7 @@ export default function Header({ locale }: { locale: string }) {
           </Link>
 
           <button
-            className={`flex h-10 w-10 items-center justify-center rounded-full border lg:hidden ${scrolled ? 'border-[#1e1b14]/15 text-[#1e1b14]' : 'border-cream/25 text-cream'}`}
+            className={`flex h-10 w-10 items-center justify-center rounded-full border lg:hidden ${onLight ? 'border-[#1e1b14]/15 text-[#1e1b14]' : 'border-cream/25 text-cream'}`}
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label="Menu"
           >

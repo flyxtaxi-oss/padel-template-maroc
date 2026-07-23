@@ -1,6 +1,7 @@
 import clubConfig from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import Link from 'next/link';
+import LogoMark from '@/components/LogoMark';
 import { MessageCircle, ArrowRight } from 'lucide-react';
 
 const InstagramIcon = ({ className }: { className?: string }) => (
@@ -21,9 +22,10 @@ export default function Footer({ locale }: { locale: string }) {
     { href: `/${locale}#courts`, label: t.navigation.courts },
     { href: `/${locale}#gallery`, label: t.navigation.gallery },
     { href: `/${locale}#contact`, label: t.navigation.contact },
-    { href: `/${locale}/qr`, label: 'QR Code avis' },
-    { href: `/${locale}/admin`, label: 'Espace gérant' },
   ];
+  // NOTE : l'espace gérant (/admin) et la page QR ne sont volontairement PAS
+  // listés ici. Ce sont des outils internes — le gérant y accède par URL directe.
+  // /admin est en plus protégé par code et exclu de l'indexation (robots.ts).
 
   return (
     <footer className="panel-court" style={{ background: '#08213c' }}>
@@ -31,8 +33,8 @@ export default function Footer({ locale }: { locale: string }) {
       <div className="border-b hair">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-6 py-14 sm:flex-row">
           <div>
-            <h3 className="font-display text-2xl font-semibold t-title sm:text-3xl">Prêt à jouer ?</h3>
-            <p className="mt-1.5 text-sm t-muted">Réservez votre terrain en 30 secondes.</p>
+            <h3 className="font-display text-2xl font-semibold t-title sm:text-3xl">{t.sections.footerCtaTitle}</h3>
+            <p className="mt-1.5 text-sm t-muted">{t.sections.footerCtaSubtitle}</p>
           </div>
           <Link href={`/${locale}#booking`} className="btn-gold px-8 py-3.5 text-sm">
             {t.actions.book}
@@ -45,7 +47,7 @@ export default function Footer({ locale }: { locale: string }) {
         <div className="grid gap-10 md:grid-cols-3">
           <div>
             <div className="mb-4 flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold font-display text-base font-semibold text-[#1a140a]">G</div>
+              <LogoMark className="h-9 w-9" />
               <span className="font-display text-lg font-semibold t-title">{name}</span>
             </div>
             <p className="max-w-xs text-sm leading-relaxed t-muted" itemScope itemType="https://schema.org/SportsActivityLocation">
@@ -59,7 +61,7 @@ export default function Footer({ locale }: { locale: string }) {
           </div>
 
           <div>
-            <h4 className="mb-4 text-sm font-semibold t-title">Navigation</h4>
+            <h4 className="mb-4 text-sm font-semibold t-title">{t.sections.footerNav}</h4>
             <ul className="space-y-2.5">
               {navLinks.map(l => (
                 <li key={l.href}>
@@ -70,7 +72,7 @@ export default function Footer({ locale }: { locale: string }) {
           </div>
 
           <div>
-            <h4 className="mb-4 text-sm font-semibold t-title">Suivez-nous</h4>
+            <h4 className="mb-4 text-sm font-semibold t-title">{t.sections.footerFollow}</h4>
             <div className="flex gap-3">
               <a href={contact.instagram} target="_blank" rel="noopener noreferrer" className="flex h-11 w-11 items-center justify-center rounded-xl border hair t-muted transition-colors hover:t-gold" aria-label="Instagram">
                 <InstagramIcon className="h-5 w-5" />
@@ -92,8 +94,8 @@ export default function Footer({ locale }: { locale: string }) {
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t hair pt-8 sm:flex-row">
           <p className="text-xs t-muted">&copy; {currentYear} {name}. {t.footer.rights}</p>
           <div className="flex gap-6">
-            <Link href="#" className="text-xs t-muted transition-colors hover:t-title">{t.footer.legal}</Link>
-            <Link href="#" className="text-xs t-muted transition-colors hover:t-title">{t.footer.privacy}</Link>
+            <Link href={`/${locale}/mentions-legales`} className="text-xs t-muted transition-colors hover:t-title">{t.footer.legal}</Link>
+            <Link href={`/${locale}/confidentialite`} className="text-xs t-muted transition-colors hover:t-title">{t.footer.privacy}</Link>
           </div>
         </div>
       </div>

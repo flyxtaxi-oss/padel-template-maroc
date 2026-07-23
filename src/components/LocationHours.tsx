@@ -1,7 +1,9 @@
 import clubConfig from '@/config/club.config';
+import { getDictionary } from '@/i18n/dictionaries';
 import { MapPin, Clock, Phone, MessageCircle } from 'lucide-react';
 
 export default function LocationHours({ locale }: { locale: string }) {
+  const t = getDictionary(locale);
   const { contact, openingHours, name } = clubConfig;
 
   return (
@@ -9,9 +11,9 @@ export default function LocationHours({ locale }: { locale: string }) {
       <div className="mx-auto max-w-7xl px-6">
 
         <div className="mb-12 text-center" data-reveal>
-          <span className="eyebrow">Nous trouver</span>
+          <span className="eyebrow">{t.sections.contactEyebrow}</span>
           <h2 className="mt-4 font-display text-3xl font-semibold t-title sm:text-4xl">
-            Nous <span className="italic t-gold">contacter</span>
+            {t.sections.contactTitle} <span className="italic t-gold">{t.sections.contactTitleAccent}</span>
           </h2>
           <div className="divider mx-auto mt-5" />
         </div>
@@ -25,7 +27,7 @@ export default function LocationHours({ locale }: { locale: string }) {
                   <MapPin className="h-5 w-5 t-gold" />
                 </div>
                 <div>
-                  <div className="text-xs font-medium t-muted">Adresse du club</div>
+                  <div className="text-xs font-medium t-muted">{t.sections.addressLabel}</div>
                   <p className="mt-1.5 text-sm font-semibold leading-relaxed t-title" itemProp="address" itemScope itemType="https://schema.org/PostalAddress">
                     <span itemProp="streetAddress">{contact.address}</span>
                   </p>
@@ -39,14 +41,16 @@ export default function LocationHours({ locale }: { locale: string }) {
                   <Clock className="h-5 w-5 t-gold" />
                 </div>
                 <div>
-                  <div className="text-xs font-medium t-muted">Horaires</div>
-                  <div className="text-sm font-semibold t-title">Ouvert 7j/7</div>
+                  <div className="text-xs font-medium t-muted">{t.sections.hoursLabel}</div>
+                  <div className="text-sm font-semibold t-title">{t.ui.openEveryday}</div>
                 </div>
               </div>
               <ul className="space-y-3">
-                {Object.entries(openingHours).map(([days, hours], i) => (
+                {/* La clé du jour n'est pas affichée : elle est en français dans la
+                    config ; on montre le libellé traduit « Ouvert 7j/7 » à la place. */}
+                {Object.values(openingHours).map((hours, i) => (
                   <li key={i} className="flex items-center justify-between border-b hair pb-3 last:border-0 last:pb-0">
-                    <span className="text-sm t-soft">{days}</span>
+                    <span className="text-sm t-soft">{t.ui.openEveryday}</span>
                     <span className="font-mono text-sm font-semibold t-gold">{hours}</span>
                   </li>
                 ))}

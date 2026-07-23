@@ -13,7 +13,7 @@ export default function Events({ locale }: { locale: string }) {
     <section id="events" className="section bg-cream">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mb-12 text-center">
-          <span className="eyebrow"><Trophy className="h-3.5 w-3.5" />Compétitions</span>
+          <span className="eyebrow"><Trophy className="h-3.5 w-3.5" />{t.sections.eventsEyebrow}</span>
           <h2 className="mt-4 font-display text-3xl font-semibold t-title sm:text-4xl">{t.navigation.events}</h2>
           <div className="divider mx-auto mt-5" />
         </div>

@@ -1,4 +1,5 @@
 import clubConfig from '@/config/club.config';
+import { getDictionary } from '@/i18n/dictionaries';
 
 const InstagramIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -9,6 +10,7 @@ const InstagramIcon = ({ className }: { className?: string }) => (
 );
 
 export default function Gallery({ locale }: { locale: string }) {
+  const t = getDictionary(locale);
   const curatedImages = [
     { src: '/clubs/golden/6.jpg', className: 'md:col-span-8 aspect-[16/10]' },
     { src: '/clubs/golden/3.jpg', className: 'md:col-span-4 aspect-square' },
@@ -23,9 +25,9 @@ export default function Gallery({ locale }: { locale: string }) {
 
         <div className="mb-12 flex flex-col justify-between gap-6 sm:flex-row sm:items-end" data-reveal>
           <div>
-            <span className="eyebrow">Le club en images</span>
+            <span className="eyebrow">{t.sections.galleryEyebrow}</span>
             <h2 className="mt-4 font-display text-3xl font-semibold t-title sm:text-[2.6rem]">
-              Notre <span className="italic t-gold">galerie</span>
+              {t.sections.galleryTitle} <span className="italic t-gold">{t.sections.galleryTitleAccent}</span>
             </h2>
           </div>
           <a href={clubConfig.contact.instagram} target="_blank" rel="noopener noreferrer" className="btn-outline px-4 py-2.5 text-sm font-medium">
