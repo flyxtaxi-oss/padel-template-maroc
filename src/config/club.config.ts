@@ -81,7 +81,9 @@ export type ClubConfig = {
   googleRating?: string;
   googleReviewCount?: number;
   contact: Contact;
-  
+  /** Reels Instagram à intégrer (lien complet ou identifiant). Vide = bandeau « Suivre ». */
+  instagramReels?: string[];
+
   // Booking Module
   bookingMode: 'whatsapp' | 'firebase' | 'external';
   slotDurationMinutes: number;
@@ -184,6 +186,10 @@ const goldenConfig: ClubConfig = {
   googleReviewUrl: undefined,
   googleRating: '5,0',
   googleReviewCount: 18,
+  // ▶ Coller ici les liens des reels du compte @goldenpadelclubtanger
+  //   (ex. 'https://www.instagram.com/reel/XXXXXXXXX/'). Lecteur officiel
+  //   Instagram, aucun fichier téléchargé.
+  instagramReels: [],
   contact: {
     phone: '+212664851592',
     whatsapp: '+212664851592',

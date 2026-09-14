@@ -27,7 +27,8 @@ Couleurs tirées du **vrai club** : terrains bleus + marque « Golden » (or) + 
 - Eyebrow : Inter, 0.72rem, uppercase, letter-spacing 0.22em, couleur or.
 
 ## Rythme des sections (alternance obligatoire)
-Hero **bleu** → À propos crème → Terrains ivoire → Réservation crème → Galerie ivoire →
+Hero **bleu** → À propos crème → Terrains ivoire → Réservation crème → **Académie bleu** →
+Instagram crème → Galerie ivoire →
 Tournois crème → FAQ ivoire → **Avis bleu** → Contact crème → **Footer bleu foncé**.
 
 > ⚠️ Deux sections de cette liste sont **conditionnelles** : Tournois disparaît si

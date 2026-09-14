@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import clubConfig from '@/config/club.config';
+import { LEDGER_COLLECTION, ledgerId, pickFreeCourt, readTaken } from '@/lib/slotLedger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -116,10 +117,43 @@ export async function PATCH(req: Request) {
   }
 
   try {
-    const ref = admin.db.collection('booking_requests').doc(id);
-    const snap = await ref.get();
-    if (!snap.exists) return NextResponse.json({ error: 'Demande introuvable' }, { status: 404 });
-    await ref.update({ status, status_updated_at: new Date().toISOString() });
+    const { db } = admin;
+    const ref = db.collection('booking_requests').doc(id);
+    const stamp = new Date().toISOString();
+
+    // Transaction : refuser une réservation instantanée libère son terrain dans
+    // le registre des créneaux ; la réactiver le reprend, s'il est encore libre.
+    const outcome = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return 'not_found' as const;
+
+      const b = snap.data() as { date?: string; time_slot?: string; status?: string; court?: number };
+      const wasActive = (b.status ?? 'pending') !== 'declined';
+      const willBeActive = status !== 'declined';
+      const patch: Record<string, unknown> = { status, status_updated_at: stamp };
+
+      // Les anciennes demandes (sans `court`) ne sont pas dans le registre.
+      if (typeof b.court === 'number' && b.date && b.time_slot && wasActive !== willBeActive) {
+        const ledgerRef = db.collection(LEDGER_COLLECTION).doc(ledgerId(b.date, b.time_slot));
+        const ledger = await tx.get(ledgerRef);
+        const taken = ledger.exists ? readTaken(ledger.get('courts_taken')) : [];
+
+        if (!willBeActive) {
+          tx.set(ledgerRef, { courts_taken: taken.filter((c) => c !== b.court), updated_at: stamp }, { merge: true });
+        } else {
+          const court = taken.includes(b.court) ? pickFreeCourt(taken) : b.court;
+          if (court === null) return 'slot_full' as const;
+          tx.set(ledgerRef, { courts_taken: [...taken, court], updated_at: stamp }, { merge: true });
+          patch.court = court;
+        }
+      }
+
+      tx.update(ref, patch);
+      return 'ok' as const;
+    });
+
+    if (outcome === 'not_found') return NextResponse.json({ error: 'Demande introuvable' }, { status: 404 });
+    if (outcome === 'slot_full') return NextResponse.json({ error: 'Créneau complet entre-temps' }, { status: 409 });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('admin status update error', err);

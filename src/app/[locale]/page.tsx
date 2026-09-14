@@ -4,6 +4,8 @@ import Marquee from '@/components/Marquee';
 import About from '@/components/About';
 import CourtsPricing from '@/components/CourtsPricing';
 import BookingWidget from '@/components/BookingWidget';
+import Academy from '@/components/Academy';
+import InstagramStrip from '@/components/InstagramStrip';
 import Gallery from '@/components/Gallery';
 import Reviews from '@/components/Reviews';
 import LocationHours from '@/components/LocationHours';
@@ -25,7 +27,8 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       <Header locale={locale} />
       {/* Alternance des fonds (DESIGN.md) — le sombre ponctue, il ne domine pas :
           Hero bleu · Marquee crème · À propos crème · Terrains ivoire ·
-          Réservation crème · Galerie ivoire · FAQ crème · Avis bleu ·
+          Réservation crème · Académie bleu · Instagram crème ·
+          Galerie ivoire · FAQ crème · Avis bleu ·
           Contact crème · Footer bleu foncé.
           ⚠️ La section Tournois est masquée tant que `events` est vide dans
           club.config.ts. En la réactivant, lui donner `bg-sand` ET repasser la
@@ -37,6 +40,8 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         <About locale={locale} />
         <CourtsPricing locale={locale} />
         <BookingWidget locale={locale} />
+        <Academy locale={locale} />
+        <InstagramStrip locale={locale} />
         <Gallery locale={locale} />
         <Events locale={locale} />
         <FAQ locale={locale} />

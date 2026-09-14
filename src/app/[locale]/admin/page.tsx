@@ -41,6 +41,7 @@ type Booking = {
   time_slot?: string;
   level?: string;
   players?: number;
+  court?: number;
   created_at?: string;
   club_slug?: string;
   locale?: string;
@@ -539,6 +540,7 @@ export default function AdminPage() {
                 </div>
                 <div className="mt-5 rounded-xl bg-white/8 p-4">
                   <div className="font-mono text-2xl font-bold t-gold">{latest.date} · {latest.time_slot}</div>
+                  {latest.court && <div className="mt-1 text-xs font-semibold t-gold">Terrain {latest.court} · réservé en ligne</div>}
                   <div className="mt-1 text-sm t-soft">{latest.players ?? '—'} joueurs · {latest.level || '—'}</div>
                 </div>
                 <div className="mt-4 flex gap-2">
@@ -676,7 +678,7 @@ export default function AdminPage() {
                           </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-4 text-sm">
-                          <span className="font-mono font-semibold t-title">{b.date} · {b.time_slot}</span>
+                          <span className="font-mono font-semibold t-title">{b.date} · {b.time_slot}{b.court ? ` · T${b.court}` : ''}</span>
                           <span className="t-muted">{b.players ?? '—'} j.</span>
                           <div className="flex gap-1.5">
                             {st === 'pending' && phoneDigits ? (

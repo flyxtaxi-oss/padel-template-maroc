@@ -104,6 +104,35 @@ Deux stratégies, au choix du club :
 Les deux peuvent coexister : garder le formulaire du site pour les clients
 directs et ajouter le lien Playtomic pour les joueurs de passage.
 
+## Réservation instantanée (s'active toute seule avec Firebase)
+
+Dès que l'étape 1 est faite (variables Firebase + `FIREBASE_SERVICE_ACCOUNT`),
+le formulaire passe automatiquement en **réservation instantanée** :
+
+- les créneaux affichent « N terrains libres » / « Complet » en direct
+  (rafraîchi toutes les 30 s) ;
+- le client obtient un **terrain attribué et confirmé** immédiatement, sans
+  attendre le gérant ;
+- deux clients qui cliquent au même instant sur le dernier terrain ne peuvent
+  pas l'obtenir tous les deux : l'attribution se fait dans une transaction
+  Firestore (collection `slot_ledger`, sans aucune donnée personnelle) ;
+- dans le tableau de bord, refuser une réservation instantanée **libère son
+  terrain** ; la remettre en attente le reprend s'il est encore libre.
+
+Rien à ajouter dans `firestore.rules` : `slot_ledger` n'est lu et écrit que par
+le serveur, et la règle « tout le reste est fermé » l'interdit aux navigateurs.
+Protections côté serveur : validation stricte, champ anti-robot, limite de
+6 tentatives / 10 min par IP.
+
+Sans Firebase, rien ne change : parcours « demande + WhatsApp ».
+
+## Vidéos Instagram
+
+La section Instagram affiche un bandeau « Suivre le club ». Pour y intégrer
+des reels, coller leurs liens dans `instagramReels` de
+[`src/config/club.config.ts`](src/config/club.config.ts) (lecteur officiel
+Instagram, aucun fichier téléchargé).
+
 ## Comment arrivent les réservations
 
 ```

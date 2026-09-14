@@ -21,6 +21,8 @@ export type StoredBooking = {
   /** Absent sur les anciennes demandes : à lire comme 'pending'. */
   status?: BookingStatus;
   status_updated_at?: string;
+  /** Terrain attribué (réservation instantanée uniquement). */
+  court?: number;
 };
 
 export type StoredFeedback = {
