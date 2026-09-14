@@ -431,8 +431,10 @@ export default function AdminPage() {
               <p className="mt-1 t-soft">
                 Cet espace utilise <code className="font-mono">{DEFAULT_ADMIN_CODE}</code>, écrit en clair dans le
                 JavaScript envoyé au navigateur : n’importe quel visiteur peut le lire. Avant de mettre le site en
-                ligne, définissez <code className="font-mono">NEXT_PUBLIC_ADMIN_CODE</code> dans les variables
-                d’environnement, puis redéployez. Ce bandeau disparaîtra.
+                ligne, définissez <code className="font-mono">ADMIN_CODE</code> et{' '}
+                <code className="font-mono">NEXT_PUBLIC_ADMIN_CODE</code> avec <strong>la même valeur</strong> dans les
+                variables d’environnement, puis redéployez. Le premier est le vrai contrôle (serveur) ; sans lui, le
+                tableau de bord reste en mode local. Ce bandeau disparaîtra.
               </p>
             </div>
           </div>

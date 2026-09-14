@@ -8,6 +8,7 @@ import { getGoogleReviewUrl } from '@/lib/reviewUrl';
 import { saveFeedback } from '@/lib/demoStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import LogoMark from '@/components/LogoMark';
 
 export default function AvisPage({ params }: { params: Promise<{ locale: string }> }) {
   const resolvedParams = use(params);
@@ -102,11 +103,12 @@ export default function AvisPage({ params }: { params: Promise<{ locale: string 
       <header className="border-b border-[#1e1b14]/10 bg-cream/80 backdrop-blur-xl px-6 py-4">
         <div className="mx-auto max-w-4xl flex items-center justify-between">
           <Link href={`/${locale}`} className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold font-display text-base font-semibold text-[#1a140a]">
-              G
-            </div>
+            {/* Même monogramme SVG que l'en-tête du site : la page avis est
+                ouverte depuis le QR du club, c'est souvent le premier contact
+                avec la marque. */}
+            <LogoMark className="h-8 w-8" />
             <span className="font-display text-lg font-semibold text-foreground">
-              Golden <span className="text-gold">Padel</span>
+              Golden <span className="t-gold">Padel</span>
             </span>
           </Link>
           
