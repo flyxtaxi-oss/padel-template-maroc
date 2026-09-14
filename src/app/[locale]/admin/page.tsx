@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { format, parseISO, isValid, subDays, addDays } from 'date-fns';
 import { getBookings, saveBooking, type StoredBooking, getFeedbacks, saveFeedback, type StoredFeedback, updateLocalBookingStatus, type BookingStatus } from '@/lib/demoStore';
@@ -148,6 +148,14 @@ export default function AdminPage() {
   const [dataMode, setDataMode] = useState<'remote' | 'local'>('local');
   const [localReason, setLocalReason] = useState<string>('');
 
+  // Statuts cliqués par le gérant et pas encore reflétés par une lecture.
+  // Le tableau de bord se rafraîchit toutes les 4 s : une lecture partie AVANT
+  // un clic, ralentie par le réseau, revenait APRÈS lui avec l'ancien statut,
+  // et le badge repassait « En attente » sous les yeux du gérant (« j'ai
+  // confirmé et ça n'a pas pris »). Chaque override tient jusqu'à ce que la
+  // source affiche le même statut, 30 s au plus.
+  const statusOverrides = useRef(new Map<string, { status: BookingStatus; at: number }>());
+
   const load = useCallback(async (accessCode: string, silent = false) => {
     if (!silent) setLoading(true);
     setError('');
@@ -157,11 +165,6 @@ export default function AdminPage() {
     // le bundle. Le code client ne sert que de repli en mode démo, sinon un
     // ADMIN_CODE serveur différent du code public rendrait la connexion
     // impossible.
-    //
-    // Stockage local : les réservations faites depuis ce navigateur. Toujours
-    // lu, y compris en mode distant, pour ne rien perdre en cas de coupure.
-    const local = getBookings() as Booking[];
-    const localFeedbacks = getFeedbacks() as StoredFeedback[];
 
     // Source distante : UNIQUEMENT via /api/admin/bookings. Une lecture
     // Firestore depuis le navigateur serait refusée par firestore.rules
@@ -223,13 +226,31 @@ export default function AdminPage() {
     setDataMode(mode);
     setLocalReason(reason);
 
-    // Fusion par id : le distant fait foi, le local complète.
+    // Stockage local lu APRÈS le réseau : il reflète ainsi un clic survenu
+    // pendant l'attente. Toujours lu, y compris en mode distant, pour ne rien
+    // perdre en cas de coupure.
+    const local = getBookings() as Booking[];
+    const localFeedbacks = getFeedbacks() as StoredFeedback[];
+
+    // Fusion par id : le distant fait foi (placé en dernier, il écrase la copie
+    // locale), le local complète ce que le serveur ne connaît pas.
     const byId = new Map<string, Booking>();
-    [...remote, ...local].forEach((b) => byId.set(b.id, b));
+    [...local, ...remote].forEach((b) => byId.set(b.id, b));
+
+    // Clics récents non encore reflétés : on les garde affichés.
+    const nowTs = Date.now();
+    for (const [id, o] of statusOverrides.current) {
+      const b = byId.get(id);
+      if (!b || statusOf(b) === o.status || nowTs - o.at > 30_000) {
+        statusOverrides.current.delete(id);
+      } else {
+        byId.set(id, { ...b, status: o.status });
+      }
+    }
     const merged = [...byId.values()].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
 
     const fbById = new Map<string, StoredFeedback>();
-    [...remoteFeedbacks, ...localFeedbacks].forEach((f) => fbById.set(f.id, f));
+    [...localFeedbacks, ...remoteFeedbacks].forEach((f) => fbById.set(f.id, f));
     const mergedFeedbacks = [...fbById.values()].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
 
     setBookings(merged);
@@ -244,6 +265,7 @@ export default function AdminPage() {
   // gérant — il vient de cliquer, WhatsApp s'ouvre, l'écran doit suivre.
   const setStatus = useCallback(async (id: string, status: BookingStatus) => {
     const stamp = new Date().toISOString();
+    statusOverrides.current.set(id, { status, at: Date.now() });
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status, status_updated_at: stamp } : b)));
 
     let persisted = false;
