@@ -14,7 +14,12 @@ leur téléphone **n'y apparaissent jamais**.
 
 ### a. Créer le projet Firebase
 1. [console.firebase.google.com](https://console.firebase.google.com) → nouveau projet.
-2. **Firestore Database** → Créer une base → mode production → région `europe-west`.
+2. **Firestore Database** → Créer une base → mode production → région
+   **`europe-west9` (Paris)**. Les fonctions Vercel du site tournent aussi à
+   Paris (`cdg1`, voir `vercel.json`) : base et serveur au même endroit, au plus
+   près de Tanger. Une base aux États-Unis ajouterait un aller-retour
+   transatlantique à chaque réservation et à chaque rafraîchissement du tableau
+   de bord.
 3. Onglet **Règles** → coller le contenu de [`firestore.rules`](firestore.rules) → **Publier**.
    Ces règles autorisent le site à créer une demande, et interdisent à quiconque
    de lire les numéros de téléphone depuis un navigateur.
