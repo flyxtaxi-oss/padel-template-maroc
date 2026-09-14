@@ -1,4 +1,6 @@
 "use client";
+import WordReveal from '@/components/WordReveal';
+import Image from 'next/image';
 import clubConfig from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import Link from 'next/link';
@@ -30,20 +32,29 @@ export default function Hero({ locale }: { locale: string }) {
       <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-6 lg:grid-cols-2 lg:gap-16">
 
         {/* Text */}
-        <div className="animate-fade-up">
-          <span className="eyebrow">
+        <div>
+          <span className="eyebrow animate-fade-up">
             <span className="h-1.5 w-1.5 rounded-full bg-gold-bright" />
             {t.sections.heroEyebrow}
           </span>
 
-          <h1 className="mt-6 font-display text-5xl font-semibold leading-[1.04] t-title sm:text-6xl xl:text-[4.6rem]">
-            Golden <span className="italic t-gold">Padel</span> Club
-          </h1>
+          <WordReveal
+            as="h1"
+            // Nom de marque en écriture latine dans toutes les langues, y
+            // compris en arabe : le flux des mots reste LTR.
+            dir="ltr"
+            className="mt-6 font-display text-5xl font-semibold leading-[1.04] t-title sm:text-6xl xl:text-[4.6rem]"
+            parts={['Golden', { text: 'Padel', className: 'italic t-gold' }, 'Club']}
+          />
 
-          <p className="mt-6 max-w-lg text-lg t-soft">{localTagline}</p>
-          <p className="mt-3 max-w-xl text-sm leading-relaxed t-muted">{localPitch}</p>
+          <p className="mt-6 max-w-lg text-lg t-soft animate-fade-up" style={{ animationDelay: '0.24s' }}>
+            {localTagline}
+          </p>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed t-muted animate-fade-up" style={{ animationDelay: '0.32s' }}>
+            {localPitch}
+          </p>
 
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-9 flex flex-col gap-3 animate-fade-up sm:flex-row" style={{ animationDelay: '0.4s' }}>
             <Link href={`/${locale}#booking`} className="btn-gold px-7 py-3.5 text-sm">
               {t.actions.book}
               <ArrowRight className="h-4 w-4" />
@@ -53,7 +64,7 @@ export default function Hero({ locale }: { locale: string }) {
             </Link>
           </div>
 
-          <div className="mt-14 grid max-w-md grid-cols-3 gap-6 border-t hair pt-8">
+          <div className="mt-14 grid max-w-md grid-cols-3 gap-6 border-t hair pt-8 animate-fade-up" style={{ animationDelay: '0.48s' }}>
             {stats.map((s, i) => (
               <div key={i}>
                 <CountUp value={s.value} className="font-mono text-2xl font-bold t-title sm:text-3xl" />
@@ -64,16 +75,23 @@ export default function Hero({ locale }: { locale: string }) {
         </div>
 
         {/* Photo */}
-        <div className="relative animate-fade-up" style={{ animationDelay: '0.1s' }}>
-          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.75rem] border border-gold/25 sm:aspect-square lg:aspect-[4/5]">
-            <img
+        <div className="relative animate-fade-up" style={{ animationDelay: '0.16s' }}>
+          <div className="card-lift-lg relative aspect-[4/5] w-full overflow-hidden rounded-[1.75rem] border border-gold/25 sm:aspect-square lg:aspect-[4/5]">
+            <Image
               src={hero.mediaPath}
               alt={`${name} — terrain de padel indoor à Tanger`}
-              className="h-full w-full object-cover"
+              fill
+              // Image LCP : `priority` la sort du lazy-loading et la précharge.
+              priority
+              sizes="(min-width: 1024px) 46vw, 92vw"
+              className="object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-court/80 via-transparent to-transparent" />
+            <div aria-hidden className="pblur">
+              <div /><div /><div />
+            </div>
+            <div aria-hidden className="absolute inset-x-0 bottom-0 z-[2] h-2/5 bg-gradient-to-t from-court/70 via-court/20 to-transparent" />
 
-            <div className="absolute bottom-5 left-5 right-5 flex items-center gap-3 rounded-2xl border border-white/15 bg-court-deep/70 px-4 py-3 backdrop-blur-md">
+            <div className="absolute bottom-5 left-5 right-5 z-[3] flex items-center gap-3 rounded-2xl border border-white/15 bg-court-deep/60 px-4 py-3 backdrop-blur-md">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gold/20">
                 <MapPin className="h-4 w-4 text-gold-bright" />
               </div>

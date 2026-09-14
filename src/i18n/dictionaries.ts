@@ -23,6 +23,14 @@ export type Dictionary = {
     confirm: string;
     successMessage: string;
     noSlots: string;
+    /** Titre affiché quand la demande n'a PAS encore atteint le club. */
+    sendTitle: string;
+    /** Explication de l'étape WhatsApp restante. */
+    sendMessage: string;
+    /** Libellé du bouton WhatsApp. */
+    sendViaWhatsApp: string;
+    /** Proposition WhatsApp quand la demande est déjà partie côté serveur. */
+    alsoWhatsApp: string;
   };
   footer: {
     rights: string;
@@ -34,6 +42,9 @@ export type Dictionary = {
     activeMembers: string;
     regulatedTemp: string;
     openEveryday: string;
+    /** Lien d'évitement : premier élément focusable, il permet à un visiteur au
+     *  clavier ou au lecteur d'écran de sauter les ~12 liens du menu. */
+    skipToContent: string;
   };
   // Titres de sections. Les titres sont scindés en deux (`X` + `XAccent`) car
   // le design met le second fragment en italique doré.
@@ -127,6 +138,10 @@ const dictionaries: Record<string, Dictionary> = {
       confirm: 'Confirmer la réservation',
       successMessage: 'Votre demande a été envoyée avec succès.',
       noSlots: 'Aucun créneau disponible pour cette date.',
+      sendTitle: 'Dernière étape',
+      sendMessage: 'Votre demande est prête. Envoyez-la au club via WhatsApp pour qu’il la reçoive et vous confirme le créneau.',
+      sendViaWhatsApp: 'Envoyer au club sur WhatsApp',
+      alsoWhatsApp: 'Confirmer plus vite sur WhatsApp',
     },
     footer: {
       rights: 'Tous droits réservés.',
@@ -138,6 +153,7 @@ const dictionaries: Record<string, Dictionary> = {
       activeMembers: 'Membres actifs',
       regulatedTemp: 'Température régulée',
       openEveryday: 'Ouvert 7j/7',
+      skipToContent: 'Aller au contenu principal',
     },
     sections: {
       heroEyebrow: 'Padel premium · Tanger',
@@ -227,6 +243,10 @@ const dictionaries: Record<string, Dictionary> = {
       confirm: 'Confirm booking',
       successMessage: 'Your request has been sent successfully.',
       noSlots: 'No slots available for this date.',
+      sendTitle: 'One last step',
+      sendMessage: 'Your request is ready. Send it to the club on WhatsApp so they receive it and confirm your slot.',
+      sendViaWhatsApp: 'Send to the club on WhatsApp',
+      alsoWhatsApp: 'Confirm faster on WhatsApp',
     },
     footer: {
       rights: 'All rights reserved.',
@@ -238,6 +258,7 @@ const dictionaries: Record<string, Dictionary> = {
       activeMembers: 'Active members',
       regulatedTemp: 'Regulated temperature',
       openEveryday: 'Open every day',
+      skipToContent: 'Skip to main content',
     },
     sections: {
       heroEyebrow: 'Premium padel · Tangier',
@@ -327,6 +348,10 @@ const dictionaries: Record<string, Dictionary> = {
       confirm: 'Confirmar reserva',
       successMessage: 'Tu solicitud ha sido enviada con éxito.',
       noSlots: 'No hay horarios disponibles para esta fecha.',
+      sendTitle: 'Último paso',
+      sendMessage: 'Tu solicitud está lista. Envíala al club por WhatsApp para que la reciba y te confirme la pista.',
+      sendViaWhatsApp: 'Enviar al club por WhatsApp',
+      alsoWhatsApp: 'Confirmar más rápido por WhatsApp',
     },
     footer: {
       rights: 'Todos los derechos reservados.',
@@ -338,6 +363,7 @@ const dictionaries: Record<string, Dictionary> = {
       activeMembers: 'Miembros activos',
       regulatedTemp: 'Temperatura regulada',
       openEveryday: 'Abierto todos los días',
+      skipToContent: 'Ir al contenido principal',
     },
     sections: {
       heroEyebrow: 'Pádel premium · Tánger',
@@ -427,6 +453,10 @@ const dictionaries: Record<string, Dictionary> = {
       confirm: 'تأكيد الحجز',
       successMessage: 'تم إرسال طلبك بنجاح.',
       noSlots: 'لا توجد أوقات متاحة في هذا التاريخ.',
+      sendTitle: 'الخطوة الأخيرة',
+      sendMessage: 'طلبك جاهز. أرسله إلى النادي عبر واتساب حتى يستقبله ويؤكد لك الحجز.',
+      sendViaWhatsApp: 'أرسل إلى النادي عبر واتساب',
+      alsoWhatsApp: 'التأكيد بشكل أسرع عبر واتساب',
     },
     footer: {
       rights: 'جميع الحقوق محفوظة.',
@@ -438,6 +468,7 @@ const dictionaries: Record<string, Dictionary> = {
       activeMembers: 'أعضاء نشطون',
       regulatedTemp: 'درجة حرارة منظمة',
       openEveryday: 'مفتوح كل يوم',
+      skipToContent: 'انتقل إلى المحتوى الرئيسي',
     },
     sections: {
       heroEyebrow: 'بادل فاخر · طنجة',

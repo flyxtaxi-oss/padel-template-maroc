@@ -6,11 +6,10 @@ import { getDictionary } from '@/i18n/dictionaries';
 import { format, parseISO } from 'date-fns';
 import type { Locale } from 'date-fns';
 import { fr as frLocale, enUS, es as esLocale, ar as arLocale } from 'date-fns/locale';
-import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
 import { saveBooking } from '@/lib/demoStore';
 import { getClubNow, addDaysStr, getSlotsForDate } from '@/lib/schedule';
-import { User, Phone, Trophy, Users, Check, ArrowRight } from 'lucide-react';
+import { User, Phone, Trophy, Users, Check, ArrowRight, MessageCircle } from 'lucide-react';
+import { hasRemoteBackend, buildWhatsAppUrl, type BookingDraft } from '@/lib/bookingDelivery';
 
 const dateLocales: Record<string, Locale> = { fr: frLocale, en: enUS, es: esLocale, ar: arLocale };
 
@@ -48,6 +47,11 @@ export default function BookingWidget({ locale }: { locale: string }) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  // Demande soumise, conservée pour pré-remplir le message WhatsApp.
+  const [sent, setSent] = useState<BookingDraft | null>(null);
+  // Un backend distant reçoit-il vraiment la demande ? Détermine ce qu'on a
+  // le droit d'affirmer au client sur l'écran de confirmation.
+  const [delivered, setDelivered] = useState(false);
 
   const { bookingMode, reservation } = clubConfig;
 
@@ -84,6 +88,9 @@ export default function BookingWidget({ locale }: { locale: string }) {
       level,
       players: parseInt(players),
       created_at: new Date().toISOString(),
+      // Langue du client : le gérant lui répondra dans celle-ci.
+      locale,
+      status: 'pending' as const,
     };
 
     // 1. Enregistrement local instantané (fiable, alimente le tableau de bord)
@@ -92,6 +99,13 @@ export default function BookingWidget({ locale }: { locale: string }) {
     // 2. Firestore si (et seulement si) configuré — avec délai max, jamais bloquant
     if (bookingMode === 'firebase' && process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
       try {
+        // Import dynamique : le SDK Firestore pèse ~570 Ko. Le charger au
+        // clic « Réserver » plutôt qu'au chargement de la page divise par deux
+        // le JavaScript initial de l'accueil.
+        const [{ db }, { collection, addDoc }] = await Promise.all([
+          import('@/lib/firebase'),
+          import('firebase/firestore'),
+        ]);
         await Promise.race([
           addDoc(collection(db, 'booking_requests'), booking),
           new Promise((resolve) => setTimeout(resolve, 4000)),
@@ -101,7 +115,12 @@ export default function BookingWidget({ locale }: { locale: string }) {
       }
     }
 
-    // 3. Confirmation (aucun message auto envoyé — la demande apparaît côté gérant)
+    // 3. Confirmation. `delivered` dit si la demande a RÉELLEMENT quitté
+    //    l'appareil. Sans backend configuré, elle n'est allée que dans le
+    //    stockage local de ce navigateur : le gérant ne la verra jamais, et
+    //    l'écran doit demander l'envoi WhatsApp au lieu de prétendre l'inverse.
+    setSent(booking);
+    setDelivered(hasRemoteBackend());
     setIsSuccess(true);
     setIsSubmitting(false);
   };
@@ -127,11 +146,29 @@ export default function BookingWidget({ locale }: { locale: string }) {
         {isSuccess ? (
           <div className="card card-lift p-12 text-center">
             <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gold/15">
-              <Check className="h-7 w-7 t-gold" />
+              {delivered ? <Check className="h-7 w-7 t-gold" /> : <MessageCircle className="h-7 w-7 t-gold" />}
             </div>
-            <h3 className="font-display text-2xl font-semibold t-title">{t.sections.bookingSuccessTitle}</h3>
-            <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed t-soft">{t.booking.successMessage}</p>
-            <div className="mt-6 text-xs t-muted">{t.sections.bookingSuccessNote}</div>
+
+            <h3 className="font-display text-2xl font-semibold t-title">
+              {delivered ? t.sections.bookingSuccessTitle : t.booking.sendTitle}
+            </h3>
+            <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed t-soft">
+              {delivered ? t.booking.successMessage : t.booking.sendMessage}
+            </p>
+
+            {sent && (
+              <a
+                href={buildWhatsAppUrl(sent, locale)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`mt-8 px-8 py-4 text-sm ${delivered ? 'btn-outline' : 'btn-gold'}`}
+              >
+                <MessageCircle className="h-4 w-4" />
+                {delivered ? t.booking.alsoWhatsApp : t.booking.sendViaWhatsApp}
+              </a>
+            )}
+
+            {delivered && <div className="mt-6 text-xs t-muted">{t.sections.bookingSuccessNote}</div>}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="card card-lift p-6 sm:p-10">

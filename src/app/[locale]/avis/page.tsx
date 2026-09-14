@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import { Star, CheckCircle2, ArrowLeft, Send, Sparkles, MessageSquare, RefreshCw } from 'lucide-react';
 import { getDictionary } from '@/i18n/dictionaries';
 import clubConfig from '@/config/club.config';
 import { getGoogleReviewUrl } from '@/lib/reviewUrl';
 import { saveFeedback } from '@/lib/demoStore';
-import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 
@@ -26,28 +24,29 @@ export default function AvisPage({ params }: { params: Promise<{ locale: string 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number>(3);
-  const [redirectStarted, setRedirectStarted] = useState<boolean>(false);
+  // Garde de non-relance : un ref, pas un state — la redirection ne doit rien
+  // réafficher, et un setState synchrone dans un effet provoque un rendu en
+  // cascade (règle react-hooks/set-state-in-effect).
+  const redirectStarted = useRef(false);
 
-  // Auto redirect logic for positive ratings (4 & 5 stars)
+  // Redirection automatique vers Google pour les avis positifs (4 & 5 étoiles).
   useEffect(() => {
-    if (rating >= 4 && !redirectStarted) {
-      setRedirectStarted(true);
-      
-      // Start countdown
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            window.location.href = getGoogleReviewUrl();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    if (rating < 4 || redirectStarted.current) return;
+    redirectStarted.current = true;
 
-      return () => clearInterval(timer);
-    }
-  }, [rating, redirectStarted]);
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          window.location.href = getGoogleReviewUrl();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [rating]);
 
   // Handle negative/neutral feedback submit (1, 2, or 3 stars)
   const handleSubmitFeedback = async (e: React.FormEvent) => {
@@ -71,6 +70,11 @@ export default function AvisPage({ params }: { params: Promise<{ locale: string 
 
       // 2. Save in Firestore if configured
       if (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+        // Import dynamique : voir BookingWidget — Firestore ne se charge qu'à l'envoi.
+        const [{ db }, { collection, addDoc }] = await Promise.all([
+          import('@/lib/firebase'),
+          import('firebase/firestore'),
+        ]);
         await addDoc(collection(db, 'feedbacks'), {
           rating: feedbackData.rating,
           comment: feedbackData.comment,

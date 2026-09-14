@@ -1,3 +1,4 @@
+import WordReveal from '@/components/WordReveal';
 import clubConfig from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import Link from 'next/link';
@@ -13,9 +14,13 @@ export default function Events({ locale }: { locale: string }) {
     <section id="events" className="section bg-cream">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mb-12 text-center">
-          <span className="eyebrow"><Trophy className="h-3.5 w-3.5" />{t.sections.eventsEyebrow}</span>
-          <h2 className="mt-4 font-display text-3xl font-semibold t-title sm:text-4xl">{t.navigation.events}</h2>
-          <div className="divider mx-auto mt-5" />
+          <span className="eyebrow" data-reveal><Trophy className="h-3.5 w-3.5" />{t.sections.eventsEyebrow}</span>
+          <WordReveal
+            as="h2"
+            className="mt-4 font-display text-3xl font-semibold t-title sm:text-4xl"
+            parts={[t.navigation.events]}
+          />
+          <div className="divider mx-auto mt-5" data-reveal style={{ '--reveal-delay': '220ms' } as React.CSSProperties} />
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

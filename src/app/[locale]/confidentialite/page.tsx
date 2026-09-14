@@ -332,10 +332,35 @@ export function generateStaticParams() {
   return clubConfig.locales.map((locale) => ({ locale }));
 }
 
+// Description propre à la page : sans elle, la page héritait de celle du
+// layout (identique à l'accueil) — description dupliquée pour Google.
+const DESCRIPTION: Record<string, string> = {
+  fr: "Politique de confidentialité de Golden Padel Club : données collectées lors d'une réservation, durée de conservation et vos droits (loi 09-08).",
+  en: 'Golden Padel Club (Tangier) privacy policy: data collected when booking or reviewing, retention period, recipients and your rights under law 09-08.',
+  es: 'Política de privacidad de Golden Padel Club (Tánger): datos recogidos al reservar u opinar, conservación, destinatarios y sus derechos (ley 09-08).',
+  ar: 'سياسة خصوصية جولدن بادل كلوب بطنجة: المعطيات المجمّعة عند حجز ملعب أو ترك رأي، مدة الاحتفاظ بها، الجهات المستفيدة وحقوقكم وفق القانون 09-08.',
+};
+
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
   const c = content[locale] || content.fr;
-  return { title: `${c.title} — ${clubConfig.name}`, robots: { index: true, follow: true } };
+  const path = '/confidentialite';
+  return {
+    title: `${c.title} — ${clubConfig.name}`,
+    description: DESCRIPTION[locale] || DESCRIPTION.fr,
+    robots: { index: true, follow: true },
+    // og:url hérité du layout pointait vers l'accueil : on l'aligne sur le canonical.
+    openGraph: { url: `/${locale}${path}`, title: `${c.title} — ${clubConfig.name}`, description: DESCRIPTION[locale] || DESCRIPTION.fr, images: [{ url: clubConfig.hero.mediaPath, width: 1200, height: 630, alt: clubConfig.name }] },
+    // Le layout déclare `canonical: /{locale}` pour toutes ses pages : sans
+    // surcharge, cette page se déclarait comme un doublon de l'accueil.
+    alternates: {
+      canonical: `/${locale}${path}`,
+      languages: {
+        ...Object.fromEntries(clubConfig.locales.map((l) => [l, `/${l}${path}`])),
+        'x-default': `/${clubConfig.defaultLocale}${path}`,
+      },
+    },
+  };
 }
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {

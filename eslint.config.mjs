@@ -16,6 +16,9 @@ const eslintConfig = defineConfig([
     // Sans cet ignore, `npm run lint` remonte des dizaines de fausses erreurs.
     ".vercel/**",
     "seo-output/**",
+    // Script utilitaire ponctuel (scraping des photos Instagram), CommonJS
+    // volontairement : hors périmètre applicatif.
+    "fetch_golden.js",
   ]),
 ]);
 

@@ -1,3 +1,5 @@
+import WordReveal from '@/components/WordReveal';
+import Image from 'next/image';
 import clubConfig from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import { Thermometer, Lightbulb, Video, Droplets, ShoppingBag, Car, ArrowRight } from 'lucide-react';
@@ -19,19 +21,30 @@ export default function CourtsPricing({ locale }: { locale: string }) {
     <section id="courts" className="section bg-sand">
       <div className="mx-auto max-w-7xl px-6">
 
-        <div className="mb-14 max-w-2xl" data-reveal>
-          <span className="eyebrow">{t.sections.courtsEyebrow}</span>
-          <h2 className="mt-4 font-display text-3xl font-semibold t-title sm:text-[2.6rem]">
-            {t.sections.courtsTitle} <span className="italic t-gold">{t.sections.courtsTitleAccent}</span>
-          </h2>
-          <div className="divider mt-5" />
+        <div className="mb-14 max-w-2xl">
+          <span className="eyebrow" data-reveal>{t.sections.courtsEyebrow}</span>
+          <WordReveal
+            as="h2"
+            className="mt-4 font-display text-3xl font-semibold t-title sm:text-[2.6rem]"
+            parts={[
+              t.sections.courtsTitle,
+              { text: t.sections.courtsTitleAccent, className: 'italic t-gold' },
+            ]}
+          />
+          <div className="divider mt-5" data-reveal style={{ '--reveal-delay': '220ms' } as React.CSSProperties} />
         </div>
 
         <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-12">
 
           <div className="space-y-6 lg:col-span-7" data-reveal>
-            <div className="relative h-60 overflow-hidden rounded-[1.5rem] card-lift">
-              <img src="/clubs/golden/5.jpg" alt="Terrains Mondo Supercourt" className="h-full w-full object-cover" />
+            <div className="relative h-60 overflow-hidden rounded-[1.5rem] card-lift-lg">
+              <Image
+                src="/clubs/golden/5.jpg"
+                alt="Terrains Mondo Supercourt"
+                fill
+                sizes="(min-width: 1024px) 58vw, 92vw"
+                className="object-cover"
+              />
               <div className="absolute inset-0 flex items-center bg-gradient-to-r from-court/92 via-court/45 to-transparent px-8">
                 <div>
                   <div className="font-display text-6xl font-semibold text-gold-bright">{courts.length}</div>
@@ -45,7 +58,10 @@ export default function CourtsPricing({ locale }: { locale: string }) {
               {features.map((f, i) => {
                 const Icon = f.icon;
                 return (
-                  <div key={i} className="card card-lift card-hover flex flex-col items-start p-5">
+                  <div key={i} className="card card-lift card-hover relative flex flex-col items-start p-5">
+                    <span className="num-marker absolute right-4 top-4" aria-hidden>
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
                     <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-gold/12">
                       <Icon className="h-5 w-5 t-gold" />
                     </div>
@@ -67,7 +83,7 @@ export default function CourtsPricing({ locale }: { locale: string }) {
                 <div
                   key={idx}
                   className={`flex items-center justify-between rounded-2xl p-6 ${
-                    isFeatured ? 'bg-court text-cream card-lift' : 'card card-lift'
+                    isFeatured ? 'edge-gold text-cream card-lift-lg' : 'card card-lift'
                   }`}
                 >
                   <div className="min-w-0 pr-4">

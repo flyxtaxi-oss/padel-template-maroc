@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import clubConfig from '@/config/club.config';
+import { SITE_URL } from '@/lib/site';
 
 export async function GET() {
   const defaultLocale = clubConfig.defaultLocale;
@@ -34,6 +35,13 @@ To book, please use the provided contact information or link.
 
 ## Supported Languages
 ${clubConfig.locales.join(', ').toUpperCase()}
+
+## Pages
+${clubConfig.locales.map(l => `- [Home (${l.toUpperCase()})](${SITE_URL}/${l})`).join('\n')}
+- [Leave a review](${SITE_URL}/${defaultLocale}/avis)
+- [Legal notice](${SITE_URL}/${defaultLocale}/mentions-legales)
+- [Privacy policy](${SITE_URL}/${defaultLocale}/confidentialite)
+${clubConfig.events?.map(e => `- [${e.title[defaultLocale]}](${SITE_URL}/${defaultLocale}/events/${e.id})`).join('\n') || ''}
 
 ## Frequently Asked Questions
 ${clubConfig.faq ? clubConfig.faq.map(f => `Q: ${f.question[defaultLocale]}\nA: ${f.answer[defaultLocale]}`).join('\n\n') : 'No FAQs available.'}

@@ -1,10 +1,39 @@
+import type { Metadata } from 'next';
+import SkipLink from '@/components/SkipLink';
+import { SITE_URL } from '@/lib/site';
 import clubConfig from '@/config/club.config';
 import { notFound } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { format, parseISO } from 'date-fns';
 import { Calendar, Trophy, MapPin } from 'lucide-react';
-import { getDictionary } from '@/i18n/dictionaries';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string; slug: string }> }): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const event = clubConfig.events?.find((e) => e.id === slug);
+  if (!event) return {};
+  const title = event.title[locale] || event.title[clubConfig.defaultLocale] || '';
+  const description = event.description[locale] || event.description[clubConfig.defaultLocale] || '';
+  const path = `/events/${slug}`;
+  return {
+    title: `${title} — ${clubConfig.name}`,
+    description: description.slice(0, 160),
+    // Sans surcharge, la page héritait du canonical de l'accueil (layout).
+    alternates: {
+      canonical: `/${locale}${path}`,
+      languages: {
+        ...Object.fromEntries(clubConfig.locales.map((l) => [l, `/${l}${path}`])),
+        'x-default': `/${clubConfig.defaultLocale}${path}`,
+      },
+    },
+    openGraph: {
+      url: `/${locale}${path}`,
+      title,
+      description: description.slice(0, 160),
+      images: [{ url: event.imagePath || clubConfig.hero.mediaPath }],
+    },
+  };
+}
 
 export default async function EventPage({ 
   params 
@@ -23,7 +52,6 @@ export default async function EventPage({
   const title = event.title[locale] || event.title[clubConfig.defaultLocale] || '';
   const description = event.description[locale] || event.description[clubConfig.defaultLocale] || '';
   const eventDate = parseISO(event.date);
-  const t = getDictionary(locale);
 
   // Generate Event JSON-LD
   const jsonLd = {
@@ -55,14 +83,15 @@ export default async function EventPage({
     organizer: {
       "@type": "Organization",
       name: clubConfig.name,
-      url: ""
+      url: SITE_URL
     }
   };
 
   return (
     <>
+      <SkipLink locale={locale} />
       <Header locale={locale} />
-      <main className="min-h-screen flex-grow bg-cream pt-28 pb-20">
+      <main id="main" className="min-h-screen flex-grow bg-cream pt-28 pb-20">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -111,12 +140,12 @@ export default async function EventPage({
 
               <div className="mt-10 flex justify-center">
                 <a
-                  href={`https://wa.me/${clubConfig.reservation.value.replace(/[^0-9]/g, '')}?text=Je souhaite m'inscrire au tournoi ${title}`}
+                  href={`https://wa.me/${clubConfig.reservation.value.replace(/[^0-9]/g, '')}?text=Je souhaite m’inscrire au tournoi ${title}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-gold px-10 py-4 text-sm"
                 >
-                  S'inscrire via WhatsApp
+                  S’inscrire via WhatsApp
                 </a>
               </div>
             </div>

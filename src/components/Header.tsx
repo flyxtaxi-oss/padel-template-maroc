@@ -47,7 +47,10 @@ export default function Header({ locale, solid = false }: { locale: string; soli
         <Link href={`/${locale}`} className="flex items-center gap-2.5">
           <LogoMark className="h-8 w-8" />
           <span className={`font-display text-lg font-semibold transition-colors ${brandInk}`}>
-            Golden <span className="text-gold">Padel</span>
+            {/* `text-gold` (#b98a2e) tombe à 2.72:1 sur la barre crème une fois
+                la page défilée. `t-gold` suit la surface : or clair sur le hero
+                bleu, or foncé lisible sur le crème. */}
+            Golden <span className={onLight ? 't-gold' : 'text-gold'}>Padel</span>
           </span>
         </Link>
 
@@ -112,7 +115,7 @@ export default function Header({ locale, solid = false }: { locale: string; soli
                 href={`/${loc}`}
                 onClick={() => setMenuOpen(false)}
                 className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase transition-colors ${
-                  loc === locale ? 'border-gold text-gold' : 'border-[#1e1b14]/15 text-[#1e1b14]/50'
+                  loc === locale ? 'border-gold t-gold' : 'border-[#1e1b14]/15 text-[#1e1b14]/50'
                 }`}
               >
                 {loc}

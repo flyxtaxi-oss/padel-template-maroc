@@ -3,14 +3,15 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { format, parseISO, isValid, subDays, addDays } from 'date-fns';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { getBookings, saveBooking, type StoredBooking, getFeedbacks, saveFeedback, type StoredFeedback } from '@/lib/demoStore';
+import { getBookings, saveBooking, type StoredBooking, getFeedbacks, saveFeedback, type StoredFeedback, updateLocalBookingStatus, type BookingStatus } from '@/lib/demoStore';
+import { buildClientReplyUrl } from '@/lib/bookingDelivery';
 import clubConfig from '@/config/club.config';
+import { SITE_URL } from '@/lib/site';
+import { useNow } from '@/lib/useNow';
 import QRCode from 'react-qr-code';
 import { motion } from 'framer-motion';
 import {
-  Lock, Phone, MessageCircle, RefreshCw, CalendarDays, Users, Trophy, LogOut,
+  Lock, Phone, MessageCircle, RefreshCw, CalendarDays, LogOut, CloudOff, Cloud, Check, X, Clock, Undo2,
   Eye, Banknote, TrendingUp, Globe, Search, Zap, Sparkles, QrCode as QrIcon, Bell, Star,
 } from 'lucide-react';
 
@@ -22,7 +23,13 @@ import {
 // quelqu'un qui inspecte le JavaScript. Il empêche l'accès accidentel
 // (visiteur, client, moteur de recherche), pas un accès déterminé.
 // Pour une vraie protection : Firebase Auth ou Vercel Password Protection.
-const ADMIN_CODE = process.env.NEXT_PUBLIC_ADMIN_CODE || 'golden2026';
+const DEFAULT_ADMIN_CODE = 'golden2026';
+const ADMIN_CODE = process.env.NEXT_PUBLIC_ADMIN_CODE || DEFAULT_ADMIN_CODE;
+
+// Vrai tant que NEXT_PUBLIC_ADMIN_CODE n'est pas défini : le code par défaut est
+// alors public (il est écrit en clair dans le bundle JavaScript). Un bandeau
+// l'affiche dans le tableau de bord pour qu'on ne puisse pas livrer sans le voir.
+const USING_DEFAULT_CODE = !process.env.NEXT_PUBLIC_ADMIN_CODE;
 
 const PRICE_MAD = clubConfig.pricing[0]?.price ?? 240;
 
@@ -36,9 +43,32 @@ type Booking = {
   players?: number;
   created_at?: string;
   club_slug?: string;
+  locale?: string;
+  status?: BookingStatus;
+  status_updated_at?: string;
 };
 
-const todayStr = () => format(new Date(), 'yyyy-MM-dd');
+/** Ancienne demande sans champ statut = en attente. */
+const statusOf = (b: Booking): BookingStatus => b.status ?? 'pending';
+
+const STATUS_LABEL: Record<BookingStatus, string> = {
+  pending: 'En attente',
+  confirmed: 'Confirmée',
+  declined: 'Refusée',
+};
+
+/** Données minimales pour rédiger la réponse WhatsApp au client. */
+const toDraft = (b: Booking) => ({
+  name: b.name || '',
+  phone: b.phone || '',
+  date: b.date || '',
+  time_slot: b.time_slot || '',
+  level: b.level || '',
+  players: b.players ?? '',
+  locale: b.locale,
+});
+
+const todayStr = (now: Date) => format(now, 'yyyy-MM-dd');
 
 // Trafic de démonstration : série déterministe (stable d'un rendu à l'autre).
 function demoVisitors(date: Date): number {
@@ -108,57 +138,94 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'bookings' | 'feedbacks'>('bookings');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [origin, setOrigin] = useState('');
+
+  // Mode de lecture des données, décidé par le serveur à chaque chargement.
+  //  · 'remote'  : l'API a répondu — le gérant voit les demandes de TOUS les
+  //                appareils. C'est le mode attendu en production.
+  //  · 'local'   : backend non configuré. Le tableau de bord ne montre que ce
+  //                qui a été réservé depuis CE navigateur. Un bandeau le dit.
+  const [dataMode, setDataMode] = useState<'remote' | 'local'>('local');
+  const [localReason, setLocalReason] = useState<string>('');
 
   const load = useCallback(async (accessCode: string, silent = false) => {
     if (!silent) setLoading(true);
     setError('');
-    if (ADMIN_CODE && accessCode !== ADMIN_CODE) {
-      setError('Code incorrect');
-      setLoading(false);
-      return;
-    }
-    // Source fiable : stockage local (démo), alimenté par chaque réservation.
+
+    // L'authentification est tranchée par le SERVEUR quand il est configuré :
+    // c'est le seul contrôle réel, `NEXT_PUBLIC_ADMIN_CODE` étant lisible dans
+    // le bundle. Le code client ne sert que de repli en mode démo, sinon un
+    // ADMIN_CODE serveur différent du code public rendrait la connexion
+    // impossible.
+    //
+    // Stockage local : les réservations faites depuis ce navigateur. Toujours
+    // lu, y compris en mode distant, pour ne rien perdre en cas de coupure.
     const local = getBookings() as Booking[];
+    const localFeedbacks = getFeedbacks() as StoredFeedback[];
 
-    // Source optionnelle : Firestore (si configuré) — non bloquant.
+    // Source distante : UNIQUEMENT via /api/admin/bookings. Une lecture
+    // Firestore depuis le navigateur serait refusée par firestore.rules
+    // (`allow read: if false`) — et exposerait les téléphones des clients.
     let remote: Booking[] = [];
-    if (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-      try {
-        const q = query(collection(db, 'booking_requests'), orderBy('created_at', 'desc'), limit(500));
-        const snap = await Promise.race([
-          getDocs(q),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000)),
-        ]);
-        remote = snap.docs
-          .map((d) => ({ id: d.id, ...d.data() }) as Booking)
-          .filter((b) => !b.club_slug || b.club_slug === clubConfig.slug);
-      } catch (err) {
-        console.error('Firestore read error', err);
+    let remoteFeedbacks: StoredFeedback[] = [];
+    let mode: 'remote' | 'local' = 'local';
+    let reason = 'Sauvegarde distante non configurée.';
+
+    try {
+      const res = await fetch('/api/admin/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: accessCode }),
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        remote = (data.bookings ?? []) as Booking[];
+        remoteFeedbacks = (data.feedbacks ?? []) as StoredFeedback[];
+        mode = 'remote';
+      } else if (res.status === 401) {
+        // Le serveur fait autorité : code refusé, on s'arrête là.
+        setError('Code incorrect');
+        setLoading(false);
+        return;
+      } else {
+        const data = await res.json().catch(() => ({}));
+        // Nuance décisive : un 503 `no_service_account` signifie que le serveur
+        // a DÉJÀ validé le code (il n'échoue que sur Firebase). Le revalider
+        // contre le code public interdirait la connexion dès que les deux
+        // diffèrent. On ne retombe sur le contrôle local que lorsque le serveur
+        // n'a pas pu authentifier du tout (`no_admin_code`).
+        if (data.reason !== 'no_service_account' && ADMIN_CODE && accessCode !== ADMIN_CODE) {
+          setError('Code incorrect');
+          setLoading(false);
+          return;
+        }
+        const base =
+          data.reason === 'no_service_account'
+            ? 'La clé de service Firebase (FIREBASE_SERVICE_ACCOUNT) n’est pas utilisable sur le serveur.'
+            : data.reason === 'no_admin_code'
+              ? 'Le code gérant serveur (ADMIN_CODE) n’est pas configuré.'
+              : 'Le serveur n’a pas pu lire les données distantes.';
+        // `detail` précise si la clé est absente, mal formée ou incomplète.
+        reason = data.detail ? `${base} ${data.detail}` : base;
       }
+    } catch {
+      // Serveur injoignable (hors ligne, timeout) : même repli local.
+      if (ADMIN_CODE && accessCode !== ADMIN_CODE) {
+        setError('Code incorrect');
+        setLoading(false);
+        return;
+      }
+      reason = 'Serveur injoignable — affichage des données de cet appareil uniquement.';
     }
 
+    setDataMode(mode);
+    setLocalReason(reason);
+
+    // Fusion par id : le distant fait foi, le local complète.
     const byId = new Map<string, Booking>();
     [...remote, ...local].forEach((b) => byId.set(b.id, b));
     const merged = [...byId.values()].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
-
-    // Charger les retours clients (gating avis)
-    const localFeedbacks = getFeedbacks() as StoredFeedback[];
-    let remoteFeedbacks: StoredFeedback[] = [];
-    if (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-      try {
-        const q = query(collection(db, 'feedbacks'), orderBy('created_at', 'desc'), limit(500));
-        const snap = await Promise.race([
-          getDocs(q),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000)),
-        ]);
-        remoteFeedbacks = snap.docs
-          .map((d) => ({ id: d.id, ...d.data() }) as StoredFeedback)
-          .filter((f) => !f.club_slug || f.club_slug === clubConfig.slug);
-      } catch (err) {
-        console.error('Firestore read error (feedbacks)', err);
-      }
-    }
 
     const fbById = new Map<string, StoredFeedback>();
     [...remoteFeedbacks, ...localFeedbacks].forEach((f) => fbById.set(f.id, f));
@@ -170,10 +237,48 @@ export default function AdminPage() {
     setLoading(false);
   }, []);
 
-  // Accès direct si aucun code n'est configuré + URL pour le QR.
+  // Confirmer / refuser une demande. Mise à jour optimiste de l'écran, puis
+  // persistance : API serveur en mode synchronisé, stockage local sinon. Si le
+  // serveur refuse (non configuré), on retombe sur le local sans bloquer le
+  // gérant — il vient de cliquer, WhatsApp s'ouvre, l'écran doit suivre.
+  const setStatus = useCallback(async (id: string, status: BookingStatus) => {
+    const stamp = new Date().toISOString();
+    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status, status_updated_at: stamp } : b)));
+
+    let persisted = false;
+    if (dataMode === 'remote') {
+      try {
+        const res = await fetch('/api/admin/bookings', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, id, status }),
+          signal: AbortSignal.timeout(8000),
+        });
+        persisted = res.ok;
+      } catch {
+        persisted = false;
+      }
+    }
+    // Toujours refléter en local : c'est aussi le cache hors ligne du gérant.
+    updateLocalBookingStatus(id, status);
+    if (!persisted && dataMode === 'remote') {
+      setError('Statut enregistré sur cet appareil seulement — synchronisation impossible pour le moment.');
+    }
+  }, [dataMode, code]);
+
+  // Horloge : source externe, lue via useSyncExternalStore pour ne pas rendre
+  // le rendu impur (`new Date()` en plein render est interdit par React 19).
+  const nowMs = useNow(60_000);
+  const now = useMemo(() => (nowMs ? new Date(nowMs) : null), [nowMs]);
+
+  // Accès direct si aucun code n'est configuré.
   useEffect(() => {
-    setOrigin(window.location.origin);
-    if (!ADMIN_CODE) load('');
+    if (ADMIN_CODE) return;
+    // « Fetch on mount » assumé : `load` est asynchrone et les états qu'elle
+    // pose viennent de la réponse, pas d'une cascade de rendus. La règle
+    // set-state-in-effect ne distingue pas ce cas légitime du vrai anti-pattern.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load('');
   }, [load]);
 
   // Rafraîchissement en direct : toutes les 4 s + événement storage (autre onglet).
@@ -186,23 +291,28 @@ export default function AdminPage() {
   }, [authed, code, load]);
 
   const stats = useMemo(() => {
-    const t = todayStr();
+    const ref = now ?? new Date(0);
+    const t = todayStr(ref);
+    const active = bookings.filter((b) => statusOf(b) !== 'declined');
     const total = bookings.length;
-    const visitors30 = Array.from({ length: 30 }).reduce<number>((acc, _, i) => acc + demoVisitors(subDays(new Date(), i)), 0);
+    const pending = bookings.filter((b) => statusOf(b) === 'pending').length;
+    const visitors30 = Array.from({ length: 30 }).reduce<number>((acc, _, i) => acc + demoVisitors(subDays(ref, i)), 0);
     return {
       total,
-      today: bookings.filter((b) => b.date === t).length,
-      upcoming: bookings.filter((b) => (b.date || '') >= t).length,
-      revenue: total * PRICE_MAD,
+      pending,
+      today: active.filter((b) => b.date === t).length,
+      upcoming: active.filter((b) => (b.date || '') >= t).length,
+      revenue: active.length * PRICE_MAD,
       visitors30,
       conversion: total > 0 ? Math.min(12, (total / visitors30) * 100 + 2.4) : 2.4,
     };
-  }, [bookings]);
+  }, [bookings, now]);
 
   // Série du graphique : 14 derniers jours.
   const chart = useMemo(() => {
+    const ref = now ?? new Date(0);
     const days = Array.from({ length: 14 }).map((_, i) => {
-      const d = subDays(new Date(), 13 - i);
+      const d = subDays(ref, 13 - i);
       const key = format(d, 'yyyy-MM-dd');
       return {
         label: format(d, 'dd/MM'),
@@ -211,12 +321,14 @@ export default function AdminPage() {
       };
     });
     const max = Math.max(...days.map((d) => d.visitors), 1);
-    return { days, max };
-  }, [bookings]);
+    const maxBookings = Math.max(...days.map((d) => d.bookings), 1);
+    return { days, max, maxBookings };
+  }, [bookings, now]);
 
-  const latest = bookings[0];
-  const latestIsFresh = latest?.created_at
-    ? Date.now() - new Date(latest.created_at).getTime() < 3 * 60 * 1000
+  // Priorité au gérant : la demande la plus récente encore à traiter.
+  const latest = bookings.find((b) => statusOf(b) === 'pending') ?? bookings[0];
+  const latestIsFresh = latest?.created_at && nowMs
+    ? nowMs - new Date(latest.created_at).getTime() < 3 * 60 * 1000
     : false;
 
   const logout = () => { setAuthed(false); setBookings([]); setCode(''); };
@@ -240,7 +352,7 @@ export default function AdminPage() {
           </div>
           <h1 className="font-display text-2xl font-semibold t-title">Espace gérant</h1>
           <p className="mt-1.5 text-sm t-muted">Golden Padel Club — réservations</p>
-          <label className="mt-7 mb-2 block text-xs font-medium t-muted">Code d'accès</label>
+          <label className="mt-7 mb-2 block text-xs font-medium t-muted">Code d’accès</label>
           <input type="password" value={code} onChange={(e) => setCode(e.target.value)} placeholder="••••••••" autoFocus className={inputCls} />
           {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
           <button type="submit" disabled={loading} className="btn-gold mt-6 w-full py-3.5 text-sm">
@@ -252,12 +364,18 @@ export default function AdminPage() {
   }
 
   // ── Tableau de bord ──
-  const kpis = [
+  // En mode synchronisé (production), tout ce qui est inventé disparaît :
+  // visiteurs, conversion, scores « présence web », bouton de données de démo.
+  // Un gérant ne doit jamais prendre une décision sur un chiffre fictif — ni
+  // injecter de faux clients parmi les vrais d'un clic.
+  const isDemo = dataMode === 'local';
+  const allKpis = [
     { label: 'Visiteurs (30 j)', value: stats.visitors30.toLocaleString('fr-FR'), icon: Eye, demo: true, sub: '+18 % vs mois dernier' },
-    { label: 'Réservations', value: `${stats.total}`, icon: CalendarDays, demo: false, sub: `${stats.today} aujourd'hui · ${stats.upcoming} à venir` },
+    { label: 'Réservations', value: `${stats.total}`, icon: CalendarDays, demo: false, sub: stats.pending ? `${stats.pending} à traiter · ${stats.upcoming} à venir` : `${stats.today} aujourd'hui · ${stats.upcoming} à venir` },
     { label: 'Revenus estimés', value: `${stats.revenue.toLocaleString('fr-FR')} MAD`, icon: Banknote, demo: false, sub: `${PRICE_MAD} MAD / créneau 90 min` },
     { label: 'Conversion', value: `${stats.conversion.toFixed(1).replace('.', ',')} %`, icon: TrendingUp, demo: true, sub: 'visiteurs → réservations' },
   ];
+  const kpis = isDemo ? allKpis : allKpis.filter((k) => !k.demo);
 
   const webCards = [
     { icon: Search, title: 'SEO', score: 96, note: 'Sitemap, meta, JSON-LD actifs' },
@@ -271,19 +389,70 @@ export default function AdminPage() {
       <div className="mx-auto max-w-6xl">
 
         {/* En-tête */}
+        {/* État de synchronisation. Le tableau de bord affichait auparavant les
+            données locales sans rien dire : le gérant croyait voir toutes ses
+            réservations alors qu'il ne voyait que celles faites sur SON
+            appareil. Ce bandeau est la différence entre un outil et un piège. */}
+        {dataMode === 'local' ? (
+          <div
+            role="alert"
+            className="mb-6 flex items-start gap-3 rounded-2xl border border-[#c0392b]/35 bg-[#c0392b]/8 p-4"
+          >
+            <CloudOff className="mt-0.5 h-4 w-4 shrink-0 text-[#c0392b]" />
+            <div className="text-sm">
+              <p className="font-semibold t-title">Mode local — vos clients ne sont pas visibles ici</p>
+              <p className="mt-1 t-soft">
+                Ce tableau de bord n’affiche que les réservations effectuées <strong>depuis ce navigateur</strong>.
+                Une demande envoyée par un client depuis son téléphone n’apparaîtra pas. {localReason}
+              </p>
+              <p className="mt-2 t-muted">
+                Pour activer la synchronisation : renseignez <code className="font-mono">FIREBASE_SERVICE_ACCOUNT</code>,{' '}
+                <code className="font-mono">ADMIN_CODE</code> et les variables{' '}
+                <code className="font-mono">NEXT_PUBLIC_FIREBASE_*</code>, puis redéployez. En attendant, les clients
+                envoient leur demande au club via WhatsApp depuis le site.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6 flex items-center gap-2 text-xs t-muted">
+            <Cloud className="h-3.5 w-3.5 t-gold" />
+            Synchronisé — les demandes de tous les appareils apparaissent ici.
+          </div>
+        )}
+
+        {USING_DEFAULT_CODE && (
+          <div
+            role="alert"
+            className="mb-6 flex items-start gap-3 rounded-2xl border border-[#b98a2e]/40 bg-[#b98a2e]/10 p-4"
+          >
+            <Lock className="mt-0.5 h-4 w-4 shrink-0 t-gold" />
+            <div className="text-sm">
+              <p className="font-semibold t-title">Code d’accès par défaut</p>
+              <p className="mt-1 t-soft">
+                Cet espace utilise <code className="font-mono">{DEFAULT_ADMIN_CODE}</code>, écrit en clair dans le
+                JavaScript envoyé au navigateur : n’importe quel visiteur peut le lire. Avant de mettre le site en
+                ligne, définissez <code className="font-mono">NEXT_PUBLIC_ADMIN_CODE</code> dans les variables
+                d’environnement, puis redéployez. Ce bandeau disparaîtra.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
               <h1 className="font-display text-2xl font-semibold t-title sm:text-3xl">Tableau de bord</h1>
-              <span className="rounded-full bg-gold/15 px-3 py-1 text-xs font-semibold t-gold">Aperçu démo</span>
+              {isDemo && <span className="rounded-full bg-gold/15 px-3 py-1 text-xs font-semibold t-gold">Aperçu démo</span>}
             </div>
-            <p className="mt-1 text-sm t-muted">Golden Padel Club — vue d'ensemble en direct</p>
+            <p className="mt-1 text-sm t-muted">Golden Padel Club — vue d’ensemble en direct</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => { seedDemoBookings(); seedDemoFeedbacks(); load(code); }} className="btn-outline px-4 py-2.5 text-sm font-medium cursor-pointer">
-              <Sparkles className="h-4 w-4" />
-              Données de démo
-            </button>
+            {isDemo && (
+              <button onClick={() => { seedDemoBookings(); seedDemoFeedbacks(); load(code); }} className="btn-outline px-4 py-2.5 text-sm font-medium cursor-pointer">
+                <Sparkles className="h-4 w-4" />
+                Données de démo
+              </button>
+            )}
             <button onClick={() => load(code)} className="btn-outline px-4 py-2.5 text-sm font-medium" disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Actualiser
@@ -319,27 +488,29 @@ export default function AdminPage() {
           <div className="card card-lift p-6 lg:col-span-2">
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <h2 className="font-display text-lg font-semibold t-title">Fréquentation du site</h2>
-                <p className="text-xs t-muted">14 derniers jours · visiteurs (démo) et réservations</p>
+                <h2 className="font-display text-lg font-semibold t-title">{isDemo ? 'Fréquentation du site' : 'Réservations'}</h2>
+                <p className="text-xs t-muted">{isDemo ? '14 derniers jours · visiteurs (démo) et réservations' : '14 derniers jours · demandes reçues par jour'}</p>
               </div>
-              <span className="rounded-full bg-court px-3 py-1 text-xs font-semibold text-cream">▲ 18 %</span>
+              {isDemo && <span className="rounded-full bg-court px-3 py-1 text-xs font-semibold text-cream">▲ 18 %</span>}
             </div>
             <div className="flex h-40 items-end gap-1.5">
               {chart.days.map((d, i) => (
-                <div key={i} className="group flex h-full flex-1 flex-col items-center justify-end gap-1" title={`${d.label} — ${d.visitors} visiteurs${d.bookings ? ` · ${d.bookings} résa` : ''}`}>
-                  {d.bookings > 0 && <span className="h-2 w-2 rounded-full bg-gold" />}
+                <div key={i} className="group flex h-full flex-1 flex-col items-center justify-end gap-1" title={isDemo ? `${d.label} — ${d.visitors} visiteurs${d.bookings ? ` · ${d.bookings} résa` : ''}` : `${d.label} — ${d.bookings} réservation${d.bookings > 1 ? 's' : ''}`}>
+                  {isDemo && d.bookings > 0 && <span className="h-2 w-2 rounded-full bg-gold" />}
                   <div
                     className="w-full rounded-t-md bg-court/80 transition-colors group-hover:bg-court"
-                    style={{ height: `${Math.max(8, (d.visitors / chart.max) * 100)}%` }}
+                    style={{ height: `${isDemo ? Math.max(8, (d.visitors / chart.max) * 100) : (d.bookings ? Math.max(12, (d.bookings / chart.maxBookings) * 100) : 4)}%` }}
                   />
                   <span className="hidden text-[9px] t-muted sm:block">{d.label.slice(0, 2)}</span>
                 </div>
               ))}
             </div>
-            <div className="mt-3 flex items-center gap-4 text-[11px] t-muted">
-              <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-3 rounded-sm bg-court/80" /> Visiteurs (démo)</span>
-              <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-gold" /> Jour avec réservation</span>
-            </div>
+            {isDemo && (
+              <div className="mt-3 flex items-center gap-4 text-[11px] t-muted">
+                <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-3 rounded-sm bg-court/80" /> Visiteurs (démo)</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-gold" /> Jour avec réservation</span>
+              </div>
+            )}
           </div>
 
           {/* Dernière réservation — en grand */}
@@ -349,7 +520,7 @@ export default function AdminPage() {
               {latestIsFresh && (
                 <span className="flex items-center gap-1.5 rounded-full bg-gold px-3 py-1 text-xs font-bold text-[#1a140a]">
                   <Bell className="h-3 w-3" />
-                  À l'instant
+                  À l’instant
                 </span>
               )}
             </div>
@@ -369,14 +540,27 @@ export default function AdminPage() {
                   <div className="mt-1 text-sm t-soft">{latest.players ?? '—'} joueurs · {latest.level || '—'}</div>
                 </div>
                 <div className="mt-4 flex gap-2">
-                  {latest.phone && (
+                  {latest.phone && statusOf(latest) === 'pending' ? (
                     <>
-                      <a href={`https://wa.me/${(latest.phone || '').replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn-gold flex-1 py-2.5 text-xs">
-                        <MessageCircle className="h-4 w-4" /> Confirmer
+                      {/* Un clic : le statut est enregistré ET WhatsApp s'ouvre avec la
+                          réponse rédigée dans la langue du client. */}
+                      <a href={buildClientReplyUrl(toDraft(latest), 'confirmed')} target="_blank" rel="noopener noreferrer" onClick={() => setStatus(latest.id, 'confirmed')} className="btn-gold flex-1 py-2.5 text-xs">
+                        <Check className="h-4 w-4" /> Confirmer
                       </a>
-                      <a href={`tel:${latest.phone}`} className="btn-outline flex-1 py-2.5 text-xs">
-                        <Phone className="h-4 w-4" /> Appeler
+                      <a href={buildClientReplyUrl(toDraft(latest), 'declined')} target="_blank" rel="noopener noreferrer" onClick={() => setStatus(latest.id, 'declined')} className="btn-outline flex-1 py-2.5 text-xs">
+                        <X className="h-4 w-4" /> Refuser
                       </a>
+                    </>
+                  ) : (
+                    <>
+                      <span className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-semibold ${statusOf(latest) === 'confirmed' ? 'bg-gold/20 t-gold' : 'bg-white/10 t-muted'}`}>
+                        {statusOf(latest) === 'confirmed' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />} {STATUS_LABEL[statusOf(latest)]}
+                      </span>
+                      {latest.phone && (
+                        <a href={`tel:${latest.phone}`} className="btn-outline flex-1 py-2.5 text-xs">
+                          <Phone className="h-4 w-4" /> Appeler
+                        </a>
+                      )}
                     </>
                   )}
                 </div>
@@ -387,8 +571,8 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Présence web */}
-        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {/* Présence web — scores illustratifs, mode démo uniquement */}
+        {isDemo && <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {webCards.map((c, i) => {
             const Icon = c.icon;
             return (
@@ -407,7 +591,7 @@ export default function AdminPage() {
               </div>
             );
           })}
-        </div>
+        </div>}
 
         {/* QR + liste des réservations */}
         <div className="grid gap-4 lg:grid-cols-3">
@@ -417,9 +601,9 @@ export default function AdminPage() {
             </div>
             <h2 className="font-display text-lg font-semibold t-title">Réserver en scannant</h2>
             <p className="mt-1 text-xs t-muted">Le client scanne → il arrive sur la réservation.</p>
-            {origin && (
+            {SITE_URL && (
               <div className="mt-4 rounded-xl bg-white p-3">
-                <QRCode value={`${origin}/${locale}#booking`} size={132} fgColor="#0d2c4f" />
+                <QRCode value={`${SITE_URL}/${locale}#booking`} size={132} fgColor="#0d2c4f" />
               </div>
             )}
             <a href={`/${locale}/qr`} className="btn-outline mt-4 w-full py-2.5 text-xs font-medium">
@@ -462,24 +646,51 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {bookings.slice(0, 30).map((b) => {
+                  {[...bookings]
+                    // Les demandes à traiter remontent en tête ; le reste garde l'ordre d'arrivée.
+                    .sort((a, b) => Number(statusOf(b) === 'pending') - Number(statusOf(a) === 'pending'))
+                    .slice(0, 30)
+                    .map((b) => {
                     const created = b.created_at && isValid(parseISO(b.created_at)) ? parseISO(b.created_at) : null;
                     const phoneDigits = (b.phone || '').replace(/[^0-9]/g, '');
+                    const st = statusOf(b);
                     return (
-                      <div key={b.id} className="card card-lift flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div key={b.id} className={`card card-lift flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between ${st === 'declined' ? 'opacity-60' : ''}`}>
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gold font-semibold text-[#1a140a]">
                             {(b.name || '?').charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="text-sm font-semibold t-title">{b.name || '—'}</div>
+                            <div className="flex items-center gap-2 text-sm font-semibold t-title">
+                              {b.name || '—'}
+                              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                st === 'confirmed' ? 'bg-gold/15 t-gold' : st === 'declined' ? 'bg-[#1e1b14]/8 t-muted' : 'bg-court/10 text-court'
+                              }`}>
+                                {st === 'confirmed' ? <Check className="h-3 w-3" /> : st === 'declined' ? <X className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                                {STATUS_LABEL[st]}
+                              </span>
+                            </div>
                             <div className="text-xs t-muted">{b.phone || '—'}{created ? ` · reçu ${format(created, 'dd/MM HH:mm')}` : ''}</div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 text-sm">
+                        <div className="flex flex-wrap items-center gap-4 text-sm">
                           <span className="font-mono font-semibold t-title">{b.date} · {b.time_slot}</span>
                           <span className="t-muted">{b.players ?? '—'} j.</span>
                           <div className="flex gap-1.5">
+                            {st === 'pending' && phoneDigits ? (
+                              <>
+                                <a href={buildClientReplyUrl(toDraft(b), 'confirmed')} target="_blank" rel="noopener noreferrer" onClick={() => setStatus(b.id, 'confirmed')} className="btn-gold px-3 py-1.5 text-xs">
+                                  <Check className="h-3.5 w-3.5" /> Confirmer
+                                </a>
+                                <a href={buildClientReplyUrl(toDraft(b), 'declined')} target="_blank" rel="noopener noreferrer" onClick={() => setStatus(b.id, 'declined')} className="btn-outline px-3 py-1.5 text-xs">
+                                  <X className="h-3.5 w-3.5" /> Refuser
+                                </a>
+                              </>
+                            ) : (
+                              <button type="button" onClick={() => setStatus(b.id, 'pending')} className="btn-outline px-2.5 py-1.5 text-xs" aria-label="Remettre en attente" title="Remettre en attente">
+                                <Undo2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                             {phoneDigits && (
                               <>
                                 <a href={`https://wa.me/${phoneDigits}`} target="_blank" rel="noopener noreferrer" className="btn-outline px-2.5 py-1.5 text-xs" aria-label="WhatsApp">
@@ -545,7 +756,7 @@ export default function AdminPage() {
                           )}
                         </div>
                         <p className="text-sm t-soft bg-sand/30 p-4 rounded-xl border border-[#1e1b14]/5 italic">
-                          "{f.comment}"
+                          « {f.comment} »
                         </p>
                       </div>
                     );
@@ -557,7 +768,9 @@ export default function AdminPage() {
         </div>
 
         <p className="mt-8 text-center text-xs t-muted">
-          Mode démonstration : les réservations s'affichent en direct sur cet appareil. Version production : synchronisation Firebase multi-appareils.
+          {isDemo
+            ? 'Mode démonstration : les réservations s’affichent en direct sur cet appareil. Version production : synchronisation Firebase multi-appareils.'
+            : 'Les demandes sont synchronisées entre tous les appareils. Actualisation automatique toutes les 4 secondes.'}
         </p>
 
       </div>

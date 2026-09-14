@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 import "../globals.css";
 import clubConfig from "@/config/club.config";
@@ -17,8 +18,13 @@ const fraunces = Fraunces({
   display: "swap",
 });
 
+// La variable s'appelle --font-jetbrains-mono, PAS --font-mono : globals.css
+// définit le token de thème `--font-mono`, et lui donner le même nom créait une
+// référence circulaire (`--font-mono: var(--font-mono)`) qui invalidait la
+// variable. Résultat : tous les `.font-mono` (prix, compteurs, stats) étaient
+// rendus en Inter au lieu de JetBrains Mono.
 const mono = JetBrains_Mono({
-  variable: "--font-mono",
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
   display: "swap",
 });
@@ -74,7 +80,11 @@ export default async function RootLayout({
   params: Promise<{ locale: string }>;
 }>) {
   const resolvedParams = await params;
-  const locale = clubConfig.locales.includes(resolvedParams.locale) ? resolvedParams.locale : clubConfig.defaultLocale;
+  // Un segment inconnu (`/inexistant.xml`, `/wp-login.php`…) tombait ici en
+  // « fr » et servait la page d'accueil en 200 : soft-404, contenu dupliqué
+  // aux yeux de Google. Un locale invalide est un vrai 404.
+  if (!clubConfig.locales.includes(resolvedParams.locale)) notFound();
+  const locale = resolvedParams.locale;
   const isRtl = locale === 'ar';
 
   // Horaires : schema.org attend des jours en anglais, pas la clé française

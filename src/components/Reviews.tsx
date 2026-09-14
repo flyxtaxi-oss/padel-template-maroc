@@ -1,3 +1,4 @@
+import WordReveal from '@/components/WordReveal';
 import clubConfig from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import { getGoogleReviewUrl } from '@/lib/reviewUrl';
@@ -20,12 +21,14 @@ export default function Reviews({ locale }: { locale: string }) {
       <div aria-hidden className="court-lines pointer-events-none absolute inset-0 opacity-30" />
       <div className="relative z-10 mx-auto max-w-7xl px-6">
 
-        <div className="mb-12 flex flex-col justify-between gap-6 sm:flex-row sm:items-end" data-reveal>
+        <div className="mb-12 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
           <div>
-            <span className="eyebrow">{t.sections.reviewsEyebrow}</span>
-            <h2 className="mt-4 font-display text-3xl font-semibold t-title sm:text-[2.6rem]">
-              {t.sections.reviewsTitle}
-            </h2>
+            <span className="eyebrow" data-reveal>{t.sections.reviewsEyebrow}</span>
+            <WordReveal
+              as="h2"
+              className="mt-4 font-display text-3xl font-semibold t-title sm:text-[2.6rem]"
+              parts={[t.sections.reviewsTitle]}
+            />
           </div>
           {googleReviewUrl && (
             <a href={googleReviewUrl} target="_blank" rel="noopener noreferrer" className="btn-outline px-5 py-2.5 text-sm font-medium">

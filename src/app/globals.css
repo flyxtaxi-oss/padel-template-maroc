@@ -17,7 +17,7 @@
   --font-display: var(--font-fraunces), serif;
   --font-heading: var(--font-fraunces), serif;
   --font-body: var(--font-inter), sans-serif;
-  --font-mono: var(--font-mono), monospace;
+  --font-mono: var(--font-jetbrains-mono), monospace;
 
   --animate-fade-up: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -46,16 +46,22 @@
   --accent: #2f7fd6;
   --font-heading: var(--font-fraunces), serif;
   --font-body: var(--font-inter), sans-serif;
-  --font-mono: var(--font-mono), monospace;
+  --font-mono: var(--font-jetbrains-mono), monospace;
 
   /* light surface (default) */
   --fg: #1e1b14;
   --fg-soft: #4a4436;
-  --fg-muted: #78715f;
+  /* #78715f ne donnait que 4.23:1 sur l'ivoire — sous le minimum WCAG AA de
+     4.5:1, alors que ce token porte TOUT le texte secondaire du site
+     (légendes, libellés, descriptions). Assombri à 4.70:1. */
+  --fg-muted: #706a59;
   --card-bg: #ffffff;
   --card-brd: rgba(30, 27, 20, 0.10);
   --hair: rgba(30, 27, 20, 0.08);
-  --gold-ctx: #97701d;   /* readable gold on light */
+  /* #97701d : 3.94:1 sur l'ivoire. Or ce token colore les eyebrows, en 0.72rem
+     majuscules — du petit texte, qui exige 4.5:1. Assombri à 4.73:1 tout en
+     restant dans l'or antique de la charte. */
+  --gold-ctx: #87641a;   /* or lisible sur fond clair — WCAG AA */
 }
 
 /* Dark "court" surface — apply to a section to flip it */
@@ -72,6 +78,46 @@
 }
 
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+/* Le défilement animé est une animation comme une autre : il déclenche des
+   malaises chez les personnes sensibles au mouvement. */
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+/* `animate-fade-up` est une animation CSS (et non une transition pilotée par
+   [data-reveal]) : elle a besoin de sa propre garde. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up { animation: none !important; }
+}
+
+/* ─── Focus clavier ────────────────────────────── */
+/* L'anneau de focus utilise `--fg`, le token de premier plan contextuel : encre
+   sur les surfaces ivoire, crème sur le panneau bleu. Il contraste donc
+   toujours avec le fond sur lequel il est tracé, y compris au-dessus du bouton
+   doré où un anneau or serait invisible. WCAG 2.2 — 2.4.11 Focus Not Obscured
+   et 2.4.13 Focus Appearance. */
+:where(a, button, [role="button"], input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 3px;
+  border-radius: inherit;
+}
+
+/* Lien d'évitement : hors écran tant qu'il n'a pas le focus. On le sort par
+   translation plutôt qu'avec `display: none`, qui le retirerait de l'ordre de
+   tabulation et le rendrait inatteignable. */
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  inset-inline-start: 0.75rem;
+  z-index: 100;
+  transform: translateY(-200%);
+  background: #b98a2e;
+  color: #1a140a;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.65rem 1.1rem;
+  border-radius: 9999px;
+  transition: transform 0.2s ease;
+}
+.skip-link:focus-visible { transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) { .skip-link { transition: none; } }
 
 body {
   font-family: var(--font-body);
@@ -125,11 +171,45 @@ body {
 }
 .card-hover:hover {
   border-color: color-mix(in srgb, var(--gold-ctx) 45%, transparent);
-  box-shadow: 0 18px 40px -22px rgba(30, 27, 20, 0.35);
+  /* Même structure en couches que `.card-lift`, un cran plus marquée : le
+     survol change l'intensité de l'élévation, pas sa nature. */
+  box-shadow:
+    0 0 0 1px rgba(30, 27, 20, 0.06),
+    0 2px 2px -1px rgba(30, 27, 20, 0.06),
+    0 5px 5px -2.5px rgba(30, 27, 20, 0.06),
+    0 10px 10px -5px rgba(30, 27, 20, 0.06),
+    0 20px 20px -10px rgba(30, 27, 20, 0.07),
+    0 36px 36px -18px rgba(30, 27, 20, 0.08);
   transform: translateY(-3px);
 }
-/* light cards get a soft shadow for depth on ivory */
-.card-lift { box-shadow: 0 20px 45px -30px rgba(30, 27, 20, 0.4); }
+@media (prefers-reduced-motion: reduce) {
+  .card-hover:hover { transform: none; }
+}
+/* Élévation en couches (skill « beautiful-shadows »), teintée encre plutôt
+   que noir pur pour rester dans la gamme chaude du site. Six ombres de rayons
+   croissants : la lumière décroît progressivement au lieu du halo unique et
+   plat d'une ombre Tailwind par défaut. */
+.card-lift {
+  box-shadow:
+    0 0 0 1px rgba(30, 27, 20, 0.05),
+    0 1px 1px -0.5px rgba(30, 27, 20, 0.05),
+    0 3px 3px -1.5px rgba(30, 27, 20, 0.05),
+    0 6px 6px -3px rgba(30, 27, 20, 0.05),
+    0 12px 12px -6px rgba(30, 27, 20, 0.05),
+    0 24px 24px -12px rgba(30, 27, 20, 0.06);
+}
+
+/* Élévation maximale : média du hero, panneaux vedettes. Ne jamais l'appliquer
+   à des listes denses ou de petits contrôles. */
+.card-lift-lg {
+  box-shadow:
+    0 2.8px 2.2px rgba(30, 27, 20, 0.028),
+    0 6.7px 5.3px rgba(30, 27, 20, 0.04),
+    0 12.5px 10px rgba(30, 27, 20, 0.05),
+    0 22.3px 17.9px rgba(30, 27, 20, 0.06),
+    0 41.8px 33.4px rgba(30, 27, 20, 0.072),
+    0 100px 80px rgba(30, 27, 20, 0.1);
+}
 
 /* ─── Buttons ──────────────────────────────────── */
 .btn-gold {
@@ -179,6 +259,119 @@ body {
 /* ─── Section rhythm ───────────────────────────── */
 .section { padding-top: 6rem; padding-bottom: 6rem; }
 @media (min-width: 640px) { .section { padding-top: 8rem; padding-bottom: 8rem; } }
+
+/* ─── Révélation mot à mot (titres éditoriaux) ─── */
+/* Le texte reste visible sans JavaScript. La garde est `@media (scripting:
+   enabled)` — pas une classe posée par un script inline : en CSS pur, elle
+   s'applique dès le premier octet (aucun flash) et surtout elle ne touche pas
+   au DOM, donc aucun écart d'hydratation React sur <html>. Un navigateur qui
+   ne connaît pas la feature affiche simplement le titre sans animation. */
+.word-reveal__word {
+  display: inline-block;
+  will-change: opacity, transform;
+}
+@media (scripting: enabled) {
+  .word-reveal .word-reveal__word {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
+    transition:
+      opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: calc(var(--word-index, 0) * 0.07s);
+  }
+  .word-reveal.in .word-reveal__word {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .word-reveal .word-reveal__word {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+/* Titre latin forcé en LTR sur une page RTL : le flux des mots redevient
+   correct, mais le bloc doit rester aligné du côté de la page. */
+[dir="rtl"] .word-reveal[dir="ltr"] { text-align: right; }
+
+/* ─── Flou progressif (skill « progressive-blur ») ─
+   Empilement de backdrop-filter masqués : le flou monte par paliers au lieu
+   d'un dégradé opaque qui écrase la photo. Utilisé en bas du média du hero
+   pour rendre le badge lisible sans masquer le terrain. */
+.pblur {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 42%;
+  pointer-events: none;
+  z-index: 1;
+}
+.pblur > div, .pblur::before {
+  position: absolute;
+  inset: 0;
+}
+.pblur::before {
+  content: "";
+  z-index: 1;
+  backdrop-filter: blur(0.5px);
+  -webkit-mask: linear-gradient(to bottom, transparent 0%, #000 20%, #000 40%, transparent 60%);
+  mask: linear-gradient(to bottom, transparent 0%, #000 20%, #000 40%, transparent 60%);
+}
+.pblur > div:nth-of-type(1) {
+  z-index: 2;
+  backdrop-filter: blur(1.5px);
+  -webkit-mask: linear-gradient(to bottom, transparent 20%, #000 40%, #000 60%, transparent 80%);
+  mask: linear-gradient(to bottom, transparent 20%, #000 40%, #000 60%, transparent 80%);
+}
+.pblur > div:nth-of-type(2) {
+  z-index: 3;
+  backdrop-filter: blur(4px);
+  -webkit-mask: linear-gradient(to bottom, transparent 40%, #000 60%, #000 80%, transparent 100%);
+  mask: linear-gradient(to bottom, transparent 40%, #000 60%, #000 80%, transparent 100%);
+}
+.pblur > div:nth-of-type(3) {
+  z-index: 4;
+  backdrop-filter: blur(9px);
+  -webkit-mask: linear-gradient(to bottom, transparent 60%, #000 80%, #000 100%);
+  mask: linear-gradient(to bottom, transparent 60%, #000 80%, #000 100%);
+}
+
+/* ─── Bord dégradé (skill « css-border-gradient ») ─
+   Un seul niveau de hiérarchie à la fois : réservé au tarif vedette. */
+.edge-gold {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#0d2c4f, #0d2c4f) padding-box,
+    linear-gradient(150deg, rgba(217, 178, 90, 0.55), rgba(217, 178, 90, 0.14) 55%, rgba(255, 255, 255, 0.06)) border-box;
+}
+
+/* ─── Repères numériques (skill « number-details ») ─
+   Structure visuelle secondaire : mono, faible contraste, jamais en concurrence
+   avec les titres ou les CTA. */
+.num-marker {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--fg) 32%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Barre de progression de défilement ────────── */
+/* Animée en `transform: scaleX` (composited) et non en `width`, qui déclenche
+   un layout à chaque frame. Voir skill « optimize-web-animations ». */
+.scroll-progress__bar {
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  will-change: transform;
+}
+@keyframes scroll-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@supports (animation-timeline: scroll()) {
+  .scroll-progress__bar {
+    animation: scroll-progress linear both;
+    animation-timeline: scroll(root block);
+  }
+}
 
 /* ─── Scroll reveal (léger, sans dépendance) ───── */
 [data-reveal] {

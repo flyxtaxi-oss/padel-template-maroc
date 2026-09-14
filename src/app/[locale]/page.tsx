@@ -12,6 +12,7 @@ import Events from '@/components/Events';
 import Footer from '@/components/Footer';
 import ScrollReveal from '@/components/ScrollReveal';
 import ScrollProgress from '@/components/ScrollProgress';
+import SkipLink from '@/components/SkipLink';
 
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
   const resolvedParams = await params;
@@ -19,9 +20,18 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
 
   return (
     <>
+      <SkipLink locale={locale} />
       <ScrollProgress />
       <Header locale={locale} />
-      <main className="flex-grow">
+      {/* Alternance des fonds (DESIGN.md) — le sombre ponctue, il ne domine pas :
+          Hero bleu · Marquee crème · À propos crème · Terrains ivoire ·
+          Réservation crème · Galerie ivoire · FAQ crème · Avis bleu ·
+          Contact crème · Footer bleu foncé.
+          ⚠️ La section Tournois est masquée tant que `events` est vide dans
+          club.config.ts. En la réactivant, lui donner `bg-sand` ET repasser la
+          FAQ en `bg-sand` : sinon Galerie et Tournois se retrouvent avec le
+          même fond et les deux sections fusionnent visuellement. */}
+      <main id="main" className="flex-grow">
         <Hero locale={locale} />
         <Marquee />
         <About locale={locale} />

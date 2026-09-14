@@ -22,8 +22,11 @@ export function proxy(request: NextRequest) {
 
   if (pathnameIsMissingLocale) {
     // Redirect to default locale
+    // `/` donnait `/fr/`, que Next redirigeait ensuite vers `/fr` : deux sauts
+    // pour la page la plus visitée. On normalise la barre finale ici.
+    const suffix = pathname === '/' ? '' : pathname;
     return NextResponse.redirect(
-      new URL(`/${clubConfig.defaultLocale}${pathname}`, request.url)
+      new URL(`/${clubConfig.defaultLocale}${suffix}`, request.url)
     );
   }
 }

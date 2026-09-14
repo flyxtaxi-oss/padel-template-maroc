@@ -1,3 +1,4 @@
+import WordReveal from '@/components/WordReveal';
 import clubConfig from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import { MapPin, Clock, Phone, MessageCircle } from 'lucide-react';
@@ -10,12 +11,17 @@ export default function LocationHours({ locale }: { locale: string }) {
     <section id="contact" className="section bg-cream">
       <div className="mx-auto max-w-7xl px-6">
 
-        <div className="mb-12 text-center" data-reveal>
-          <span className="eyebrow">{t.sections.contactEyebrow}</span>
-          <h2 className="mt-4 font-display text-3xl font-semibold t-title sm:text-4xl">
-            {t.sections.contactTitle} <span className="italic t-gold">{t.sections.contactTitleAccent}</span>
-          </h2>
-          <div className="divider mx-auto mt-5" />
+        <div className="mb-12 text-center">
+          <span className="eyebrow" data-reveal>{t.sections.contactEyebrow}</span>
+          <WordReveal
+            as="h2"
+            className="mt-4 font-display text-3xl font-semibold t-title sm:text-4xl"
+            parts={[
+              t.sections.contactTitle,
+              { text: t.sections.contactTitleAccent, className: 'italic t-gold' },
+            ]}
+          />
+          <div className="divider mx-auto mt-5" data-reveal style={{ '--reveal-delay': '220ms' } as React.CSSProperties} />
         </div>
 
         <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
@@ -94,7 +100,7 @@ export default function LocationHours({ locale }: { locale: string }) {
                 <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/15">
                   <MapPin className="h-7 w-7 t-gold" />
                 </div>
-                <h4 className="font-display text-xl font-semibold t-title">{name}</h4>
+                <h3 className="font-display text-xl font-semibold t-title">{name}</h3>
                 <p className="mt-2 max-w-xs text-sm t-muted">{contact.address}</p>
                 <a href={`https://maps.google.com/?q=${encodeURIComponent(contact.address)}`} target="_blank" rel="noopener noreferrer" className="btn-gold mt-8 px-7 py-3.5 text-sm">
                   Voir sur Google Maps
