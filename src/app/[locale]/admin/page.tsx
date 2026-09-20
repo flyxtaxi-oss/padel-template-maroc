@@ -8,11 +8,15 @@ import { buildClientReplyUrl } from '@/lib/bookingDelivery';
 import clubConfig from '@/config/club.config';
 import { SITE_URL } from '@/lib/site';
 import { useNow } from '@/lib/useNow';
+import {
+  occupancy, peakHours, clients, dayPlanning, revenueOfMonth, toCsv, slotsOfDay, COURTS, PRICE_MAD,
+} from '@/lib/bookingStats';
 import QRCode from 'react-qr-code';
 import { motion } from 'framer-motion';
 import {
   Lock, Phone, MessageCircle, RefreshCw, CalendarDays, LogOut, CloudOff, Cloud, Check, X, Clock, Undo2,
   Eye, Banknote, TrendingUp, Globe, Search, Zap, Sparkles, QrCode as QrIcon, Bell, Star,
+  LayoutGrid, Users, Download, BarChart3, Repeat,
 } from 'lucide-react';
 
 // Code d'accès. Surchargeable via NEXT_PUBLIC_ADMIN_CODE dans .env.local /
@@ -30,8 +34,6 @@ const ADMIN_CODE = process.env.NEXT_PUBLIC_ADMIN_CODE || DEFAULT_ADMIN_CODE;
 // alors public (il est écrit en clair dans le bundle JavaScript). Un bandeau
 // l'affiche dans le tableau de bord pour qu'on ne puisse pas livrer sans le voir.
 const USING_DEFAULT_CODE = !process.env.NEXT_PUBLIC_ADMIN_CODE;
-
-const PRICE_MAD = clubConfig.pricing[0]?.price ?? 240;
 
 type Booking = {
   id: string;
@@ -90,18 +92,41 @@ const DEMO_NAMES: Array<[string, string, string, number]> = [
   ['Emma Wilson', '+447911123456', 'Intermediate', 4],
 ];
 
+// Réservations de démonstration. Les créneaux et les terrains sont ceux que le
+// club propose réellement (`slotsOfDay`) : sans cela, le planning des terrains
+// resterait vide pendant une présentation, chaque demande tombant « hors
+// grille ». Deux clients reviennent deux fois — c'est ce qui fait apparaître la
+// carte « clients fidèles ».
 function seedDemoBookings() {
-  const slots = ['09:30', '11:00', '17:00', '18:30', '20:00', '21:30', '15:30'];
   const now = Date.now();
-  DEMO_NAMES.forEach(([name, phone, level, players], i) => {
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const slots = slotsOfDay(today);
+  // Créneaux du soir : ceux qui se remplissent vraiment dans un club de padel.
+  const evening = slots.slice(-5);
+  const pick = (i: number) => evening[i % evening.length] ?? slots[0];
+
+  const plan: Array<[number, number, number]> = [
+    // [index du client, jour (+n), terrain]
+    [0, 0, 1], [1, 0, 2], [2, 0, 3], [3, 0, 1],
+    [4, 1, 1], [5, 1, 2], [6, 1, 3],
+    [0, 2, 2], [2, 2, 4],
+  ];
+
+  plan.forEach(([nameIdx, dayOffset, court], i) => {
+    const [name, phone, level, players] = DEMO_NAMES[nameIdx];
+    const date = format(addDays(new Date(), dayOffset), 'yyyy-MM-dd');
     saveBooking({
       id: `demo_${now}_${i}`,
       name,
       phone,
       level,
       players,
-      date: format(addDays(new Date(), i % 4), 'yyyy-MM-dd'),
-      time_slot: slots[i % slots.length],
+      court,
+      date,
+      time_slot: pick(i),
+      // La plus récente reste « en attente » : le gérant a quelque chose à
+      // traiter à l'écran, bouton Confirmer compris.
+      status: i === 0 ? 'pending' : 'confirmed',
       created_at: new Date(now - i * 47 * 60 * 1000).toISOString(),
       club_slug: clubConfig.slug,
     } as StoredBooking);
@@ -257,6 +282,14 @@ export default function AdminPage() {
     setFeedbacks(mergedFeedbacks);
     setAuthed(true);
     setLoading(false);
+
+    // Empreinte de l'état lu : elle sert au sondage adaptatif ci-dessous à
+    // savoir si quoi que ce soit a bougé depuis la fois précédente. Elle tient
+    // compte des statuts, pas seulement du nombre : confirmer une demande est
+    // un changement, même à effectif constant.
+    return `${merged.length}:${mergedFeedbacks.length}:${merged[0]?.created_at ?? ''}:${merged
+      .map((b) => statusOf(b))
+      .join('')}`;
   }, []);
 
   // Confirmer / refuser une demande. Mise à jour optimiste de l'écran, puis
@@ -304,13 +337,107 @@ export default function AdminPage() {
     load('');
   }, [load]);
 
-  // Rafraîchissement en direct : toutes les 4 s + événement storage (autre onglet).
+  /**
+   * Rafraîchissement en direct — et sobre en lectures Firestore.
+   *
+   * La première version sondait toutes les 4 secondes, sans condition. Chaque
+   * sondage relit les réservations ET les retours clients : à 60 documents par
+   * passage, cela fait 54 000 lectures par heure. Le quota gratuit de Firestore
+   * (50 000 lectures/jour) était donc épuisé en **56 minutes** : passé ce
+   * délai, le gérant n'avait plus qu'un message d'erreur jusqu'au lendemain —
+   * et sur le plan payant, la facture montait pour rien.
+   *
+   * Quatre garde-fous, sans rien perdre du « direct » ressenti :
+   *  · 15 s entre deux sondages quand le club bouge ;
+   *  · cadence ralentie jusqu'à 60 s après trois lectures identiques — un club
+   *    calme à 15 h n'a pas besoin d'être interrogé quatre fois par minute, et
+   *    la moindre nouveauté fait immédiatement repasser à 15 s ;
+   *  · rien tant que l'onglet est en arrière-plan — personne ne regarde ;
+   *  · rien après 5 minutes sans le moindre geste : un écran allumé dans un
+   *    bureau vide ne consomme plus.
+   * Dans tous les cas, le retour du gérant (onglet au premier plan, clic,
+   * touche, molette) déclenche une lecture immédiate : l'écran est à jour avant
+   * qu'il ait fini de s'asseoir.
+   */
   useEffect(() => {
     if (!authed) return;
-    const iv = setInterval(() => load(code, true), 4000);
-    const onStorage = () => load(code, true);
+
+    const FAST = 15_000;
+    const SLOW = 60_000;
+    const IDLE_AFTER = 5 * 60_000;
+
+    let lastActivity = Date.now();
+    let delay = FAST;
+    let quiet = 0;
+    let signature = '';
+    let timer: ReturnType<typeof setTimeout>;
+    let stopped = false;
+
+    const schedule = () => {
+      if (stopped) return;
+      timer = setTimeout(tick, delay);
+    };
+
+    const tick = async () => {
+      const awake =
+        document.visibilityState === 'visible' && Date.now() - lastActivity <= IDLE_AFTER;
+
+      if (awake) {
+        const sig = await load(code, true);
+        if (sig !== undefined) {
+          if (sig === signature) {
+            quiet += 1;
+            if (quiet >= 3) delay = SLOW;
+          } else {
+            signature = sig;
+            quiet = 0;
+            delay = FAST;
+          }
+        }
+      }
+      schedule();
+    };
+
+    // Réveil : lecture immédiate et retour à la cadence rapide.
+    const wakeNow = () => {
+      lastActivity = Date.now();
+      quiet = 0;
+      delay = FAST;
+      clearTimeout(timer);
+      tick();
+    };
+
+    const onActivity = () => {
+      // Un simple geste ne déclenche pas de requête ; il ne fait que repousser
+      // la mise en veille. Seule une vraie reprise (veille ou onglet caché)
+      // relance une lecture.
+      const wasIdle = Date.now() - lastActivity > IDLE_AFTER;
+      lastActivity = Date.now();
+      if (wasIdle) wakeNow();
+    };
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') wakeNow();
+    };
+
+    const onStorage = () => wakeNow();
+
     window.addEventListener('storage', onStorage);
-    return () => { clearInterval(iv); window.removeEventListener('storage', onStorage); };
+    document.addEventListener('visibilitychange', onVisible);
+    for (const ev of ['pointerdown', 'keydown', 'wheel'] as const) {
+      window.addEventListener(ev, onActivity, { passive: true });
+    }
+    schedule();
+
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      window.removeEventListener('storage', onStorage);
+      document.removeEventListener('visibilitychange', onVisible);
+      for (const ev of ['pointerdown', 'keydown', 'wheel'] as const) {
+        window.removeEventListener(ev, onActivity);
+      }
+    };
   }, [authed, code, load]);
 
   const stats = useMemo(() => {
@@ -320,15 +447,51 @@ export default function AdminPage() {
     const total = bookings.length;
     const pending = bookings.filter((b) => statusOf(b) === 'pending').length;
     const visitors30 = Array.from({ length: 30 }).reduce<number>((acc, _, i) => acc + demoVisitors(subDays(ref, i)), 0);
+
+    // Mesures réelles : elles valent autant en démo qu'en production, et ce
+    // sont elles qui font vivre le tableau de bord une fois Firebase branché.
+    const occ = occupancy(bookings, t, 7);
+    const clientList = clients(bookings);
+    const recurring = clientList.filter((c) => c.visits > 1).length;
+
     return {
       total,
       pending,
       today: active.filter((b) => b.date === t).length,
       upcoming: active.filter((b) => (b.date || '') >= t).length,
       revenue: active.length * PRICE_MAD,
+      revenueMonth: revenueOfMonth(bookings, t.slice(0, 7)),
+      occupancy: occ,
+      clientList,
+      recurring,
       visitors30,
       conversion: total > 0 ? Math.min(12, (total / visitors30) * 100 + 2.4) : 2.4,
     };
+  }, [bookings, now]);
+
+  // Planning : aujourd'hui par défaut, demain d'un clic (le gérant prépare sa soirée).
+  const [planningOffset, setPlanningOffset] = useState(0);
+  const planningDate = useMemo(
+    () => (now ? todayStr(addDays(now, planningOffset)) : ''),
+    [now, planningOffset],
+  );
+  const planning = useMemo(
+    () => (planningDate ? dayPlanning(bookings, planningDate) : null),
+    [bookings, planningDate],
+  );
+
+  const peaks = useMemo(() => peakHours(bookings), [bookings]);
+  const peakMax = Math.max(1, ...peaks.map((p) => p.count));
+
+  // Export tableur : fichier construit dans le navigateur, rien n'est envoyé.
+  const exportCsv = useCallback(() => {
+    const blob = new Blob([toCsv(bookings)], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reservations-${clubConfig.slug}-${todayStr(now ?? new Date())}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }, [bookings, now]);
 
   // Série du graphique : 14 derniers jours.
@@ -392,19 +555,30 @@ export default function AdminPage() {
   // Un gérant ne doit jamais prendre une décision sur un chiffre fictif — ni
   // injecter de faux clients parmi les vrais d'un clic.
   const isDemo = dataMode === 'local';
-  const allKpis = [
-    { label: 'Visiteurs (30 j)', value: stats.visitors30.toLocaleString('fr-FR'), icon: Eye, demo: true, sub: '+18 % vs mois dernier' },
+
+  // KPIs calculés sur les vraies réservations : ils restent identiques une fois
+  // le site en production. Les deux cartes « démo » (visiteurs, conversion)
+  // s'ajoutent en plus, et disparaissent dès que la synchronisation est active.
+  const realKpis = [
     { label: 'Réservations', value: `${stats.total}`, icon: CalendarDays, demo: false, sub: stats.pending ? `${stats.pending} à traiter · ${stats.upcoming} à venir` : `${stats.today} aujourd'hui · ${stats.upcoming} à venir` },
-    { label: 'Revenus estimés', value: `${stats.revenue.toLocaleString('fr-FR')} MAD`, icon: Banknote, demo: false, sub: `${PRICE_MAD} MAD / créneau 90 min` },
+    { label: 'Remplissage', value: `${Math.round(stats.occupancy.rate * 100)} %`, icon: LayoutGrid, demo: false, sub: `${stats.occupancy.booked} / ${stats.occupancy.capacity} créneaux · 7 jours à venir` },
+    { label: 'Revenus du mois', value: `${stats.revenueMonth.toLocaleString('fr-FR')} MAD`, icon: Banknote, demo: false, sub: `${PRICE_MAD} MAD / créneau 90 min` },
+    { label: 'Clients', value: `${stats.clientList.length}`, icon: Users, demo: false, sub: stats.recurring ? `dont ${stats.recurring} fidèle${stats.recurring > 1 ? 's' : ''} (2 venues et +)` : 'clients uniques identifiés' },
+  ];
+  const demoKpis = [
+    { label: 'Visiteurs (30 j)', value: stats.visitors30.toLocaleString('fr-FR'), icon: Eye, demo: true, sub: '+18 % vs mois dernier' },
     { label: 'Conversion', value: `${stats.conversion.toFixed(1).replace('.', ',')} %`, icon: TrendingUp, demo: true, sub: 'visiteurs → réservations' },
   ];
-  const kpis = isDemo ? allKpis : allKpis.filter((k) => !k.demo);
+  const kpis = isDemo ? [...realKpis, ...demoKpis] : realKpis;
 
-  const webCards = [
-    { icon: Search, title: 'SEO', score: 96, note: 'Sitemap, meta, JSON-LD actifs' },
-    { icon: Sparkles, title: 'AEO / IA', score: 94, note: 'llms.txt + FAQ structurée' },
-    { icon: Globe, title: 'GEO', score: 100, note: '4 langues · FR EN AR ES' },
-    { icon: Zap, title: 'Performance', score: 98, note: 'Rendu statique Next.js' },
+  // Visibilité web : des FAITS vérifiables (chaque ligne renvoie au fichier que
+  // Google ou une IA lit réellement), et non un score inventé sur 100. Un
+  // gérant peut cliquer et voir. C'est ce qui reste affichable en production.
+  const webFacts = [
+    { icon: Search, title: 'SEO', note: 'Sitemap, balises, données structurées', href: '/sitemap.xml', link: 'sitemap.xml' },
+    { icon: Sparkles, title: 'AEO / IA', note: 'Fiche lisible par ChatGPT, Gemini, Perplexity', href: '/llms.txt', link: 'llms.txt' },
+    { icon: Globe, title: 'GEO / local', note: 'Fiche lieu, horaires, carte, 4 langues', href: `/${locale}#contact`, link: 'FR · EN · AR · ES' },
+    { icon: Zap, title: 'Indexation', note: 'Espace gérant exclu des moteurs', href: '/robots.txt', link: 'robots.txt' },
   ];
 
   return (
@@ -478,6 +652,15 @@ export default function AdminPage() {
                 Données de démo
               </button>
             )}
+            <button
+              onClick={exportCsv}
+              className="btn-outline px-4 py-2.5 text-sm font-medium cursor-pointer"
+              disabled={bookings.length === 0}
+              title="Télécharger toutes les réservations (Excel)"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </button>
             <button onClick={() => load(code)} className="btn-outline px-4 py-2.5 text-sm font-medium" disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Actualiser
@@ -491,7 +674,7 @@ export default function AdminPage() {
         </div>
 
         {/* KPIs */}
-        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className={`mb-6 grid grid-cols-2 gap-4 ${isDemo ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
           {kpis.map((k, i) => {
             const Icon = k.icon;
             return (
@@ -597,27 +780,180 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Présence web — scores illustratifs, mode démo uniquement */}
-        {isDemo && <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {webCards.map((c, i) => {
+        {/* Planning du jour — une ligne par terrain, une colonne par créneau.
+            C'est l'écran que le gérant ouvre le matin : qui joue, où, à quelle
+            heure, et quels créneaux restent à vendre ce soir. */}
+        <div className="card card-lift mb-6 p-6">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-semibold t-title">Planning des terrains</h2>
+              <p className="text-xs t-muted">
+                {planning
+                  ? `${planning.rows.reduce((n, r) => n + r.cells.filter((c) => c.booking).length, 0)} créneau(x) occupé(s) sur ${planning.slots.length * COURTS.length}`
+                  : '—'}
+              </p>
+              <p className="mt-1.5 flex items-center gap-3 text-[11px] t-muted">
+                <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-4 rounded-sm bg-court" /> Confirmé</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-4 rounded-sm border border-dashed border-gold bg-gold/15" /> En attente</span>
+              </p>
+            </div>
+            <div className="flex gap-1.5">
+              {[0, 1, 2].map((off) => (
+                <button
+                  key={off}
+                  type="button"
+                  onClick={() => setPlanningOffset(off)}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                    planningOffset === off ? 'bg-court text-cream' : 'bg-[#1e1b14]/6 t-muted hover:t-title'
+                  }`}
+                >
+                  {off === 0 ? "Aujourd'hui" : off === 1 ? 'Demain' : 'Après-demain'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {!planning || planning.slots.length === 0 ? (
+            <p className="text-sm t-muted">Aucun créneau ce jour-là.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] border-separate border-spacing-1">
+                <thead>
+                  <tr>
+                    <th className="w-20 text-left text-[11px] font-medium t-muted">Terrain</th>
+                    {planning.slots.map((s) => (
+                      <th key={s} className="font-mono text-[11px] font-medium t-muted">{s}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {planning.rows.map((row) => (
+                    <tr key={row.court}>
+                      <td className="text-xs font-semibold t-title">T{row.court}</td>
+                      {row.cells.map((cell) => (
+                        <td key={cell.slot} className="p-0">
+                          {cell.booking ? (
+                            // En attente ≠ confirmé : le gérant voit d'un coup
+                            // d'œil ce qui est acquis et ce qu'il doit encore
+                            // rappeler avant de considérer le terrain vendu.
+                            <div
+                              className={`truncate rounded-lg px-2 py-2 text-[11px] font-semibold ${
+                                statusOf(cell.booking as Booking) === 'pending'
+                                  ? 'border border-dashed border-gold bg-gold/15 t-title'
+                                  : 'bg-court text-cream'
+                              }`}
+                              title={`${cell.booking.name} · ${cell.booking.phone} · ${cell.booking.players ?? '—'} joueurs · ${STATUS_LABEL[statusOf(cell.booking as Booking)]}`}
+                            >
+                              {(cell.booking.name || '—').split(' ')[0]}
+                            </div>
+                          ) : (
+                            <div className="rounded-lg border border-dashed border-[#1e1b14]/12 px-2 py-2 text-center text-[11px] t-muted">
+                              libre
+                            </div>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {planning && planning.unassigned.length > 0 && (
+            <p className="mt-4 rounded-xl bg-gold/10 p-3 text-xs t-soft">
+              <strong>{planning.unassigned.length} demande(s)</strong> sans terrain attribué ce jour-là
+              ({planning.unassigned.map((b) => `${b.name} ${b.time_slot}`).join(', ')}) — reçues avant la
+              réservation instantanée, à placer à la main.
+            </p>
+          )}
+        </div>
+
+        {/* Heures de pointe + clients fidèles — deux décisions concrètes :
+            quand ouvrir/renforcer, et qui rappeler. */}
+        <div className="mb-6 grid gap-4 lg:grid-cols-2">
+          <div className="card card-lift p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 t-gold" />
+              <h2 className="font-display text-lg font-semibold t-title">Heures de pointe</h2>
+            </div>
+            {stats.total === 0 ? (
+              <p className="text-sm t-muted">Les créneaux les plus demandés apparaîtront ici dès les premières réservations.</p>
+            ) : (
+              <div className="space-y-2">
+                {peaks.map((p) => (
+                  <div key={p.time} className="flex items-center gap-3">
+                    <span className="w-12 font-mono text-xs t-muted">{p.time}</span>
+                    <div className="h-4 flex-1 overflow-hidden rounded-full bg-[#1e1b14]/6">
+                      <div className="h-full rounded-full bg-gold" style={{ width: `${(p.count / peakMax) * 100}%` }} />
+                    </div>
+                    <span className="w-6 text-right font-mono text-xs t-title">{p.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="card card-lift p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Repeat className="h-4 w-4 t-gold" />
+              <h2 className="font-display text-lg font-semibold t-title">Clients fidèles</h2>
+            </div>
+            {stats.clientList.length === 0 ? (
+              <p className="text-sm t-muted">Chaque réservation identifie un client par son numéro. Les habitués remonteront ici.</p>
+            ) : (
+              <div className="space-y-2.5">
+                {stats.clientList.slice(0, 6).map((c) => (
+                  <div key={c.key} className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold t-title">{c.name}</div>
+                      <div className="text-xs t-muted">{c.phone}</div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-sm font-bold t-gold">{c.visits}×</span>
+                      <a
+                        href={`https://wa.me/${c.phone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-outline px-2.5 py-1.5 text-xs"
+                        aria-label={`Écrire à ${c.name}`}
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Visibilité web — des faits cliquables, pas des scores inventés. */}
+        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {webFacts.map((c, i) => {
             const Icon = c.icon;
             return (
               <div key={i} className="card card-lift p-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-court/10">
-                    <Icon className="h-4 w-4 text-court" />
-                  </div>
-                  <span className="font-mono text-xl font-bold t-title">{c.score}<span className="text-xs t-muted">/100</span></span>
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-court/10">
+                  <Icon className="h-4 w-4 text-court" />
                 </div>
-                <div className="mt-3 text-sm font-semibold t-title">{c.title}</div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#1e1b14]/8">
-                  <div className="h-full rounded-full bg-gold" style={{ width: `${c.score}%` }} />
+                <div className="mt-3 flex items-center gap-2 text-sm font-semibold t-title">
+                  {c.title}
+                  <Check className="h-3.5 w-3.5 t-gold" />
                 </div>
-                <div className="mt-2 text-[11px] t-muted">{c.note}</div>
+                <div className="mt-1.5 text-[11px] t-muted">{c.note}</div>
+                <a
+                  href={c.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2.5 inline-block font-mono text-[11px] t-gold underline underline-offset-2"
+                >
+                  {c.link}
+                </a>
               </div>
             );
           })}
-        </div>}
+        </div>
 
         {/* QR + liste des réservations */}
         <div className="grid gap-4 lg:grid-cols-3">

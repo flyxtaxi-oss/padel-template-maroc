@@ -4,9 +4,13 @@ import clubConfig from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import Link from 'next/link';
 import LogoMark from '@/components/LogoMark';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Phone, MessageCircle } from 'lucide-react';
 
 const ACADEMY_LABEL: Record<string, string> = { fr: 'Académie', en: 'Academy', es: 'Academia', ar: 'الأكاديمية' };
+
+// Même logique que ci-dessus : un libellé propre à l'en-tête, qui n'a pas à
+// gonfler le dictionnaire partagé.
+const CALL_LABEL: Record<string, string> = { fr: 'Appeler', en: 'Call', es: 'Llamar', ar: 'اتصل' };
 
 const MENU_LABEL: Record<string, { open: string; close: string }> = {
   fr: { open: 'Ouvrir le menu', close: 'Fermer le menu' },
@@ -169,6 +173,33 @@ export default function Header({ locale, solid = false }: { locale: string; soli
           <Link href={`/${locale}#booking`} onClick={() => setMenuOpen(false)} className="btn-gold mt-6 py-4 text-sm">
             {t.actions.book}
           </Link>
+
+          {/* Appeler et WhatsApp, à portée de pouce.
+              Le menu mobile s'arrêtait au bouton « Réserver », et laissait un
+              grand vide en dessous. Or une partie des clients d'un club de
+              padel ne remplit pas un formulaire : elle appelle, ou envoie un
+              message. Ne leur donner que le formulaire, c'est les renvoyer
+              chercher le numéro en bas de page — ou ailleurs. */}
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <a
+              href={`tel:${clubConfig.contact.phone}`}
+              onClick={() => setMenuOpen(false)}
+              className="btn-outline py-3.5 text-sm font-medium"
+            >
+              <Phone className="h-4 w-4" aria-hidden />
+              {CALL_LABEL[locale] || CALL_LABEL.fr}
+            </a>
+            <a
+              href={`https://wa.me/${clubConfig.contact.whatsapp.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setMenuOpen(false)}
+              className="btn-outline py-3.5 text-sm font-medium"
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden />
+              WhatsApp
+            </a>
+          </div>
         </nav>
       </div>
     </>

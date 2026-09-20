@@ -5,6 +5,8 @@ import "../globals.css";
 import clubConfig from "@/config/club.config";
 import { SITE_URL } from "@/lib/site";
 import { getOpeningRange } from "@/lib/schedule";
+import { metaDescription, metaTitle } from "@/lib/seo";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -33,8 +35,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const resolvedParams = await params;
   const locale = clubConfig.locales.includes(resolvedParams.locale) ? resolvedParams.locale : clubConfig.defaultLocale;
   
-  const title = `${clubConfig.name} - ${clubConfig.tagline[locale] || clubConfig.tagline[clubConfig.defaultLocale]}`;
-  const description = clubConfig.about.text[locale]?.slice(0, 160) || clubConfig.about.text[clubConfig.defaultLocale].slice(0, 160);
+  const title = metaTitle(locale);
+  const description = metaDescription(locale);
   
   const languages = clubConfig.locales.reduce((acc, loc) => {
     acc[loc] = `/${loc}`;
@@ -57,13 +59,15 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       url: `${SITE_URL}/${locale}`,
       title,
       description,
-      images: [{ url: clubConfig.hero.mediaPath, width: 1200, height: 630, alt: clubConfig.name }],
+      // Pas d'`images` ici : l'aperçu est généré par `opengraph-image.tsx`, au
+      // format 1200×630. Déclarer la photo du hero revenait à annoncer un
+      // portrait de 640 px comme une bannière paysage — WhatsApp et Facebook
+      // le rognaient. Une valeur ici écraserait l'image générée.
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [clubConfig.hero.mediaPath],
     },
     alternates: {
       canonical: `/${locale}`,
@@ -132,10 +136,53 @@ export default async function RootLayout({
         priceRange,
         sport: "Padel",
         sameAs: [clubConfig.contact.instagram],
+        // GEO : ce que Google et les assistants utilisent pour répondre à
+        // « padel près de moi », « club de padel ouvert ce soir à Tanger ».
+        hasMap: `https://www.google.com/maps/search/?api=1&query=${clubConfig.contact.lat},${clubConfig.contact.lng}`,
+        areaServed: { "@type": "City", name: "Tanger" },
+        publicAccess: true,
+        isAccessibleForFree: false,
+        // Le paiement se fait sur place (cf. FAQ) : on ne déclare rien d'autre.
+        paymentAccepted: "Cash",
+        // Langues parlées par l'équipe, telles qu'annoncées dans la FAQ.
+        knowsLanguage: ["ar", "fr", "en"],
+        // Équipements affichés sur la page « Terrains & tarifs ». Une IA qui
+        // répond « est-ce qu'il y a un parking / des douches ? » lit ceci.
+        amenityFeature: [
+          ["Terrains indoor", true],
+          ["Climatisation", true],
+          ["Éclairage LED", true],
+          ["Vidéosurveillance", true],
+          ["Douches & vestiaires", true],
+          ["Pro-shop", true],
+          ["Parking privé gratuit", true],
+        ].map(([name, value]) => ({
+          "@type": "LocationFeatureSpecification",
+          name,
+          value,
+        })),
+        // Tarifs explicites : une IA interrogée sur le prix cite ce chiffre au
+        // lieu d'en inventer un.
+        makesOffer: clubConfig.pricing.map((p) => ({
+          "@type": "Offer",
+          name: p.label[locale] || p.label[clubConfig.defaultLocale],
+          price: p.price,
+          priceCurrency: "MAD",
+          availability: "https://schema.org/InStock",
+          url: `${SITE_URL}/${locale}#booking`,
+        })),
         potentialAction: {
           "@type": "ReserveAction",
           target: `${SITE_URL}/${locale}#booking`
         }
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
+        url: `${SITE_URL}/${locale}`,
+        name: clubConfig.name,
+        inLanguage: locale,
+        publisher: { "@id": `${SITE_URL}/#business` }
       },
       ...(clubConfig.faq && clubConfig.faq.length > 0 ? [{
         "@type": "FAQPage",
@@ -172,6 +219,13 @@ export default async function RootLayout({
         } as React.CSSProperties}
       >
         {children}
+        {/* Audience réelle du site (Vercel Analytics) : sans cookie, sans
+            bannière de consentement, l'adresse IP n'étant ni stockée ni
+            revendue. C'est ce qui permettra au club de savoir combien de
+            visiteurs il reçoit vraiment — jusqu'ici le tableau de bord n'avait
+            qu'un chiffre de démonstration. À activer une fois dans Vercel :
+            projet → onglet Analytics → Enable. */}
+        <Analytics />
       </body>
     </html>
   );

@@ -7,6 +7,9 @@ import Link from 'next/link';
 import { ArrowRight, MapPin } from 'lucide-react';
 import CountUp from '@/components/CountUp';
 
+// Hero « image-first » (skill image-first-grid-layout) : la photo du club est
+// la scène, pas un encart. Le texte s'ancre en bas à gauche, au-dessus d'un
+// rail d'informations fin qui remplace les cartes de statistiques.
 export default function Hero({ locale }: { locale: string }) {
   const { hero, name, tagline } = clubConfig;
   const t = getDictionary(locale);
@@ -20,89 +23,89 @@ export default function Hero({ locale }: { locale: string }) {
   ];
 
   return (
-    <section className="panel-court relative w-full overflow-hidden pt-32 pb-20 sm:pt-40 sm:pb-28">
-      {/* court-line brand motif, very subtle */}
-      <div aria-hidden className="court-lines pointer-events-none absolute inset-0 opacity-40" />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-32 right-[-10%] h-[460px] w-[460px] rounded-full opacity-25 blur-[130px]"
-        style={{ background: 'radial-gradient(circle, #d9b25a 0%, transparent 70%)' }}
+    <section className="panel-court relative isolate flex min-h-[100svh] w-full flex-col justify-end overflow-hidden pt-28">
+      <Image
+        src={hero.mediaPath}
+        alt={`${name} — terrain de padel indoor à Tanger`}
+        fill
+        // Image LCP : `priority` la sort du lazy-loading et la précharge.
+        priority
+        // Aperçu flou inline, affiché tant que la photo n'est pas arrivée.
+        // C'est ce qui remplace le rectangle noir qu'on voyait le temps que le
+        // serveur optimise l'image (plusieurs secondes sur un déploiement neuf).
+        {...(hero.blurDataURL ? { placeholder: 'blur' as const, blurDataURL: hero.blurDataURL } : {})}
+        sizes="100vw"
+        // La photo est un portrait affiché dans un cadre paysage : sans point
+        // d'ancrage, le cadrage automatique (centre) coupait le mur au logo du
+        // club et ne gardait que les silhouettes floues du premier plan.
+        // 38 % remonte le cadre sur le logo et les joueurs.
+        className="-z-20 object-cover object-[50%_38%]"
       />
+      {/* Lisibilité du texte SANS enterrer la photo.
+          Ces trois voiles se superposent : cumulés à 100/70/75 %, ils
+          éteignaient complètement l'image — le hero paraissait noir, alors
+          même que DESIGN.md demande une photo plein écran. Ils sont désormais
+          dosés pour que la photo reste lisible partout, en ne redevenant
+          opaques que là où se trouve réellement le texte : le bas à gauche.
+          Teintes bleu terrain, jamais noir pur. */}
+      <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-t from-court-deep via-court-deep/40 to-transparent" />
+      <div aria-hidden className="absolute inset-x-0 top-0 -z-10 h-36 bg-gradient-to-b from-court-deep/60 to-transparent" />
+      <div aria-hidden className="absolute inset-y-0 start-0 -z-10 w-full bg-gradient-to-r from-court-deep/70 via-court-deep/15 to-transparent lg:w-2/3 rtl:bg-gradient-to-l" />
 
-      <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-6 lg:grid-cols-2 lg:gap-16">
+      <div className="mx-auto w-full max-w-7xl px-6 pb-12 sm:pb-16">
+        <span className="eyebrow animate-fade-up">
+          <span className="h-1.5 w-1.5 rounded-full bg-gold-bright" />
+          {t.sections.heroEyebrow}
+        </span>
 
-        {/* Text */}
-        <div>
-          <span className="eyebrow animate-fade-up">
-            <span className="h-1.5 w-1.5 rounded-full bg-gold-bright" />
-            {t.sections.heroEyebrow}
-          </span>
+        <WordReveal
+          as="h1"
+          // Nom de marque en écriture latine dans toutes les langues, y
+          // compris en arabe : le flux des mots reste LTR.
+          dir="ltr"
+          className="mt-5 max-w-4xl font-display text-[clamp(3.2rem,9vw,7.5rem)] font-semibold leading-[0.95] t-title"
+          parts={['Golden', { text: 'Padel', className: 'italic t-gold' }, 'Club']}
+        />
 
-          <WordReveal
-            as="h1"
-            // Nom de marque en écriture latine dans toutes les langues, y
-            // compris en arabe : le flux des mots reste LTR.
-            dir="ltr"
-            className="mt-6 font-display text-5xl font-semibold leading-[1.04] t-title sm:text-6xl xl:text-[4.6rem]"
-            parts={['Golden', { text: 'Padel', className: 'italic t-gold' }, 'Club']}
-          />
+        <div className="mt-8 grid gap-8 lg:grid-cols-12 lg:items-end">
+          <div className="lg:col-span-6">
+            <p className="max-w-lg text-lg t-soft animate-fade-up" style={{ animationDelay: '0.24s' }}>
+              {localTagline}
+            </p>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed t-muted animate-fade-up" style={{ animationDelay: '0.32s' }}>
+              {localPitch}
+            </p>
+          </div>
 
-          <p className="mt-6 max-w-lg text-lg t-soft animate-fade-up" style={{ animationDelay: '0.24s' }}>
-            {localTagline}
-          </p>
-          <p className="mt-3 max-w-xl text-sm leading-relaxed t-muted animate-fade-up" style={{ animationDelay: '0.32s' }}>
-            {localPitch}
-          </p>
-
-          <div className="mt-9 flex flex-col gap-3 animate-fade-up sm:flex-row" style={{ animationDelay: '0.4s' }}>
-            <Link href={`/${locale}#booking`} className="btn-gold px-7 py-3.5 text-sm">
+          <div className="flex flex-col gap-3 animate-fade-up sm:flex-row lg:col-span-6 lg:justify-end" style={{ animationDelay: '0.4s' }}>
+            <Link href={`/${locale}#booking`} className="btn-gold px-8 py-4 text-sm">
               {t.actions.book}
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4 rtl:rotate-180" />
             </Link>
-            <Link href={`/${locale}#about`} className="btn-outline px-7 py-3.5 text-sm font-medium">
+            <Link href={`/${locale}#about`} className="btn-outline px-8 py-4 text-sm font-medium">
               {t.actions.discover}
             </Link>
           </div>
-
-          <div className="mt-14 grid max-w-md grid-cols-3 gap-6 border-t hair pt-8 animate-fade-up" style={{ animationDelay: '0.48s' }}>
-            {stats.map((s, i) => (
-              <div key={i}>
-                <CountUp value={s.value} className="font-mono text-2xl font-bold t-title sm:text-3xl" />
-                <div className="mt-1 text-xs t-muted">{s.label}</div>
-              </div>
-            ))}
-          </div>
         </div>
+      </div>
 
-        {/* Photo */}
-        <div className="relative animate-fade-up" style={{ animationDelay: '0.16s' }}>
-          <div className="card-lift-lg relative aspect-[4/5] w-full overflow-hidden rounded-[1.75rem] border border-gold/25 sm:aspect-square lg:aspect-[4/5]">
-            <Image
-              src={hero.mediaPath}
-              alt={`${name} — terrain de padel indoor à Tanger`}
-              fill
-              // Image LCP : `priority` la sort du lazy-loading et la précharge.
-              priority
-              sizes="(min-width: 1024px) 46vw, 92vw"
-              className="object-cover"
-            />
-            <div aria-hidden className="pblur">
-              <div /><div /><div />
+      {/* Rail d'informations : filets fins, chiffres en mono. */}
+      <div className="border-t hair">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 px-6 sm:grid-cols-4">
+          {stats.map((s, i) => (
+            <div key={i} className={`py-5 sm:py-6 ${i > 0 ? 'sm:border-s sm:ps-6' : ''} ${i % 2 === 1 ? 'border-s ps-6 sm:ps-6' : ''} hair`}>
+              <CountUp value={s.value} className="font-mono text-2xl font-bold t-title sm:text-3xl" />
+              <div className="mt-1 text-xs t-muted">{s.label}</div>
             </div>
-            <div aria-hidden className="absolute inset-x-0 bottom-0 z-[2] h-2/5 bg-gradient-to-t from-court/70 via-court/20 to-transparent" />
-
-            <div className="absolute bottom-5 left-5 right-5 z-[3] flex items-center gap-3 rounded-2xl border border-white/15 bg-court-deep/60 px-4 py-3 backdrop-blur-md">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gold/20">
-                <MapPin className="h-4 w-4 text-gold-bright" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-cream">Marjane, Route de Rabat</p>
-                <p className="text-xs text-cream/60">{clubConfig.courts[0]?.surface}</p>
-              </div>
+          ))}
+          <div className="col-span-2 flex items-center gap-3 border-t py-5 hair sm:col-span-1 sm:border-s sm:border-t-0 sm:ps-6">
+            <MapPin className="h-4 w-4 shrink-0 t-gold" aria-hidden />
+            <div>
+              <p className="text-sm font-semibold t-title">Marjane, Route de Rabat</p>
+              <p className="text-xs t-muted">{clubConfig.courts[0]?.surface}</p>
             </div>
           </div>
         </div>
-
       </div>
     </section>
   );

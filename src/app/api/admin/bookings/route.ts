@@ -66,16 +66,22 @@ export async function POST(req: Request) {
   // garde plutôt que de la faire disparaître du tableau de bord.
   const belongsToClub = (d: { club_slug?: string }) => !d.club_slug || d.club_slug === clubConfig.slug;
 
-  async function readCollection<T extends { club_slug?: string }>(name: string): Promise<T[]> {
-    const snap = await db.collection(name).orderBy('created_at', 'desc').limit(500).get();
+  // Chaque document lu est facturé une lecture Firestore, à chaque
+  // rafraîchissement du tableau de bord. 500 documents par collection, c'était
+  // dix fois ce que l'écran affiche (30 réservations, 50 retours) : le quota
+  // gratuit partait en fumée sans qu'aucun de ces documents ne soit regardé.
+  // Le tri par `created_at` décroissant garde les plus récents, les seuls qui
+  // comptent pour un planning et des statistiques à 7 jours.
+  async function readCollection<T extends { club_slug?: string }>(name: string, max: number): Promise<T[]> {
+    const snap = await db.collection(name).orderBy('created_at', 'desc').limit(max).get();
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as unknown as T).filter(belongsToClub);
   }
 
   try {
     // Les deux lectures sont indépendantes : en parallèle.
     const [bookings, feedbacks] = await Promise.all([
-      readCollection<{ id: string; club_slug?: string }>('booking_requests'),
-      readCollection<{ id: string; club_slug?: string }>('feedbacks'),
+      readCollection<{ id: string; club_slug?: string }>('booking_requests', 150),
+      readCollection<{ id: string; club_slug?: string }>('feedbacks', 50),
     ]);
     return NextResponse.json({ bookings, feedbacks });
   } catch (err) {
