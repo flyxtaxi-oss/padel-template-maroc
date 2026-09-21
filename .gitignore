@@ -43,3 +43,6 @@ next-env.d.ts
 
 # Réglages Claude Code propres à la machine
 .claude/settings.local.json
+
+# Journal du CLI Firebase (détails de requêtes : ne jamais committer)
+firebase-debug.log
