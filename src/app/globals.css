@@ -81,6 +81,25 @@ html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 /* Le défilement animé est une animation comme une autre : il déclenche des
    malaises chez les personnes sensibles au mouvement. */
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* ── Défilement fluide (Lenis) ──────────────────────────────────────────────
+   Lenis pose lui-même la classe `lenis` sur <html> quand il démarre ; tout ce
+   qui suit ne s'applique donc QUE si la librairie tourne vraiment (elle ne
+   démarre pas en « mouvement réduit », et seulement sur l'accueil).
+   `scroll-behavior: smooth` doit être neutralisé : deux moteurs de défilement
+   qui animent la même page en même temps se battent, et le saut vers une ancre
+   part en oscillation. */
+html.lenis { scroll-behavior: auto; }
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: clip; }
+/* ⚠️ Ne PAS ajouter ici la règle `.lenis-smooth iframe { pointer-events: none }`
+   que propose la documentation de Lenis : la classe `lenis-smooth` est présente
+   en permanence, pas seulement pendant un défilement. Elle rendrait donc
+   définitivement inertes la carte Google et les reels Instagram le jour où le
+   club les activera. Pour empêcher une zone de capter la molette, poser
+   `data-lenis-prevent` sur son conteneur (règle ci-dessus). */
 /* `animate-fade-up` est une animation CSS (et non une transition pilotée par
    [data-reveal]) : elle a besoin de sa propre garde. */
 @media (prefers-reduced-motion: reduce) {
@@ -266,27 +285,61 @@ body {
    s'applique dès le premier octet (aucun flash) et surtout elle ne touche pas
    au DOM, donc aucun écart d'hydratation React sur <html>. Un navigateur qui
    ne connaît pas la feature affiche simplement le titre sans animation. */
+/* Masque par mot (skill « masked-reveal ») : le mot monte à travers une
+   fenêtre `overflow: hidden`. Le rembourrage compensé par une marge négative
+   agrandit la fenêtre sans décaler la ligne : les jambages (g, p) et la pente
+   de l'italique ne sont pas rognés. */
+.word-reveal__mask {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  /* Fraunces 600 : jambages (g, p, q) jusqu'à ~0.22em sous la ligne. */
+  padding-block: 0.1em 0.26em;
+  margin-block: -0.1em -0.26em;
+  /* Pas de marge négative ici : la pente de l'italique mangerait l'espace
+     avec le mot suivant (« PadelClub »). */
+  padding-inline-end: 0.08em;
+}
+/* Italique : l'encre déborde côté fin de mot jusqu'à ~0.15em (mesuré sur
+   « Padel », « autrement », « contacter » ; côté gauche en arabe). Fenêtre
+   élargie à 0.22em, dont 0.14em repris en marge négative : l'espace visible
+   avec le mot suivant reste celui des mots droits (+0.08em). */
+.word-reveal__mask:has(> .italic) {
+  padding-inline-end: 0.22em;
+  margin-inline-end: -0.14em;
+}
+/* Arabe : pas d'italique typographique. Le navigateur synthétise une pente
+   (faux italique) qui sort du masque et rogne les lettres — mesuré sur
+   « مختلف », « بأسلوب », « في ». L'accent reste porté par l'or. Les lettres
+   liées débordent aussi de leur boîte des deux côtés : fenêtre élargie
+   symétriquement. La marge négative ne reprend que la moitié du rembourrage :
+   compensée en entier, l'encre libérée comblait l'espace et les mots se
+   collaient (« مدرسةالبادل »). Le nom de marque (dir="ltr") garde son
+   italique latin. */
+[dir="rtl"] .word-reveal:not([dir="ltr"]) .word-reveal__word.italic {
+  font-style: normal;
+}
+[dir="rtl"] .word-reveal:not([dir="ltr"]) .word-reveal__mask,
+[dir="rtl"] .word-reveal:not([dir="ltr"]) .word-reveal__mask:has(> .italic) {
+  padding-inline: 0.16em;
+  margin-inline: -0.08em;
+}
 .word-reveal__word {
   display: inline-block;
-  will-change: opacity, transform;
+  will-change: transform;
 }
 @media (scripting: enabled) {
   .word-reveal .word-reveal__word {
-    opacity: 0;
-    transform: translate3d(0, 20px, 0);
-    transition:
-      opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-    transition-delay: calc(var(--word-index, 0) * 0.07s);
+    transform: translate3d(0, 110%, 0);
+    transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: calc(var(--word-index, 0) * 0.05s);
   }
   .word-reveal.in .word-reveal__word {
-    opacity: 1;
     transform: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .word-reveal .word-reveal__word {
-    opacity: 1 !important;
     transform: none !important;
     transition: none !important;
   }

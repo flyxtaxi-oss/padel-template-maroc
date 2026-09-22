@@ -15,6 +15,17 @@ import Footer from '@/components/Footer';
 import ScrollReveal from '@/components/ScrollReveal';
 import ScrollProgress from '@/components/ScrollProgress';
 import SkipLink from '@/components/SkipLink';
+import SmoothScroll from '@/components/SmoothScroll';
+import clubConfig from '@/config/club.config';
+
+// Les 4 pages d'accueil sont générées au build, comme les pages légales.
+// Sans cela, Next rendait l'accueil à CHAQUE visite (route `ƒ` dynamique) :
+// le visiteur — et le robot de Google — attendait le serveur au lieu de
+// recevoir un fichier déjà prêt depuis le CDN. C'est la page la plus vue du
+// site et celle sur laquelle se joue le référencement.
+export function generateStaticParams() {
+  return clubConfig.locales.map((locale) => ({ locale }));
+}
 
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
   const resolvedParams = await params;
@@ -23,6 +34,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
   return (
     <>
       <SkipLink locale={locale} />
+      <SmoothScroll />
       <ScrollProgress />
       <Header locale={locale} />
       {/* Alternance des fonds (DESIGN.md) — le sombre ponctue, il ne domine pas :

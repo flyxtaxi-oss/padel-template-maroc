@@ -15,9 +15,9 @@ import { Fragment, type ElementType } from 'react';
  * mots. Sans JavaScript, `@media (scripting: enabled)` ne s'applique pas et le
  * texte reste visible (voir globals.css).
  *
- * Tokens de mouvement (skill « staggered-word-reveal ») : y 20px → 0,
- * opacité 0 → 1, 0.8s, cubic-bezier(0.16, 1, 0.3, 1), décalage 0.07s par mot,
- * une seule fois.
+ * Tokens de mouvement (skill « masked-reveal ») : chaque mot monte de 110 %
+ * à travers un masque `overflow: hidden`, 0.9s, cubic-bezier(0.16, 1, 0.3, 1),
+ * décalage 0.05s par mot, une seule fois.
  */
 export type WordRevealPart = string | { text: string; className?: string };
 
@@ -60,12 +60,13 @@ export default function WordReveal({
             // offre au navigateur son point de césure. Une espace insécable ici
             // empêcherait tout retour à la ligne et ferait déborder les titres.
             <Fragment key={`${partIdx}-${wordIdx}`}>
-              <span
-                className={`word-reveal__word ${part.className ?? ''}`}
-                style={{ '--word-index': i } as React.CSSProperties}
-                aria-hidden="true"
-              >
-                {word}
+              <span className="word-reveal__mask" aria-hidden="true">
+                <span
+                  className={`word-reveal__word ${part.className ?? ''}`}
+                  style={{ '--word-index': i } as React.CSSProperties}
+                >
+                  {word}
+                </span>
               </span>{' '}
             </Fragment>
           );

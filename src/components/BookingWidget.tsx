@@ -6,7 +6,8 @@ import { getDictionary } from '@/i18n/dictionaries';
 import { format, parseISO } from 'date-fns';
 import type { Locale } from 'date-fns';
 import { fr as frLocale, enUS, es as esLocale, ar as arLocale } from 'date-fns/locale';
-import { saveBooking, type StoredBooking } from '@/lib/demoStore';
+import { saveBooking, getBookings, type StoredBooking } from '@/lib/demoStore';
+import { COURTS } from '@/lib/bookingStats';
 import { getClubNow, addDaysStr, getSlotsForDate } from '@/lib/schedule';
 import { User, Phone, Trophy, Users, Check, ArrowRight, MessageCircle, RotateCcw } from 'lucide-react';
 import { hasRemoteBackend, buildWhatsAppUrl, type BookingDraft } from '@/lib/bookingDelivery';
@@ -227,7 +228,20 @@ export default function BookingWidget({ locale }: { locale: string }) {
       }
     }
 
-    // 2. Enregistrement local instantané (fiable, alimente le tableau de bord)
+    // 2. Enregistrement local instantané (fiable, alimente le tableau de bord).
+    //    Sans backend, aucun terrain n'a été attribué par le serveur : on
+    //    réserve localement le premier terrain libre du créneau, comme le ferait
+    //    la transaction Firestore, pour que le planning du gérant reflète la
+    //    demande. Le statut reste « en attente » — rien n'est promis au client
+    //    que le club n'a pas confirmé.
+    if (!live) {
+      const used = new Set(
+        getBookings()
+          .filter((b) => b.date === selectedDate && b.time_slot === selectedSlot && b.status !== 'declined')
+          .map((b) => b.court),
+      );
+      booking.court = COURTS.find((c) => !used.has(c));
+    }
     saveBooking(booking);
 
     // 3. Firestore si (et seulement si) configuré — avec délai max, jamais bloquant

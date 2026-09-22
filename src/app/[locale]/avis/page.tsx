@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, use } from 'react';
+import { useState, useEffect, use } from 'react';
 import { Star, CheckCircle2, ArrowLeft, Send, Sparkles, MessageSquare, RefreshCw } from 'lucide-react';
 import { getDictionary } from '@/i18n/dictionaries';
 import clubConfig from '@/config/club.config';
@@ -10,11 +10,54 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import LogoMark from '@/components/LogoMark';
 
+/**
+ * Textes du choix « publier sur Google » / « écrire au club », dans les quatre
+ * langues du site. Ils doivent avoir le même poids visuel et le même ton :
+ * c'est ce qui distingue une alternative offerte d'un aiguillage déguisé.
+ */
+const CHOICE_COPY: Record<string, {
+  lowTitle: string;
+  lowSubtitle: string;
+  privateLink: string;
+  alsoGoogle: string;
+  publishNow: string;
+}> = {
+  fr: {
+    lowTitle: 'Merci pour votre franchise',
+    lowSubtitle: 'Votre avis aide les autres joueurs et nous aide à progresser. Publiez-le sur Google, ou écrivez directement au club si vous préférez en parler en privé.',
+    privateLink: 'Je préfère écrire au club en privé',
+    alsoGoogle: 'Publier aussi mon avis sur Google',
+    publishNow: 'Publier maintenant',
+  },
+  en: {
+    lowTitle: 'Thank you for your honesty',
+    lowSubtitle: 'Your review helps other players and helps us improve. Publish it on Google, or write to the club directly if you would rather discuss it privately.',
+    privateLink: 'I would rather write to the club privately',
+    alsoGoogle: 'Also publish my review on Google',
+    publishNow: 'Publish now',
+  },
+  es: {
+    lowTitle: 'Gracias por tu sinceridad',
+    lowSubtitle: 'Tu opinión ayuda a otros jugadores y nos ayuda a mejorar. Publícala en Google, o escribe directamente al club si prefieres comentarlo en privado.',
+    privateLink: 'Prefiero escribir al club en privado',
+    alsoGoogle: 'Publicar también mi opinión en Google',
+    publishNow: 'Publicar ahora',
+  },
+  ar: {
+    lowTitle: 'شكرًا على صراحتك',
+    lowSubtitle: 'رأيك يساعد اللاعبين الآخرين ويساعدنا على التحسّن. انشره على Google، أو راسل النادي مباشرة إن كنت تفضّل الحديث بشكل خاص.',
+    privateLink: 'أفضّل مراسلة النادي بشكل خاص',
+    alsoGoogle: 'انشر رأيي على Google أيضًا',
+    publishNow: 'انشر الآن',
+  },
+};
+
 export default function AvisPage({ params }: { params: Promise<{ locale: string }> }) {
   const resolvedParams = use(params);
   const locale = resolvedParams.locale || 'fr';
   const isRtl = locale === 'ar';
   const t = getDictionary(locale);
+  const C = CHOICE_COPY[locale] || CHOICE_COPY.fr;
 
   // States
   const [rating, setRating] = useState<number>(0);
@@ -25,15 +68,33 @@ export default function AvisPage({ params }: { params: Promise<{ locale: string 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number>(3);
-  // Garde de non-relance : un ref, pas un state — la redirection ne doit rien
-  // réafficher, et un setState synchrone dans un effet provoque un rendu en
-  // cascade (règle react-hooks/set-state-in-effect).
-  const redirectStarted = useRef(false);
+  // Le visiteur a choisi d'écrire au club plutôt que de publier sur Google.
+  // C'est SON choix, pas un filtre appliqué à sa note : voir le commentaire
+  // sur la redirection ci-dessous.
+  const [privateMode, setPrivateMode] = useState<boolean>(false);
 
-  // Redirection automatique vers Google pour les avis positifs (4 & 5 étoiles).
+  /**
+   * Redirection vers Google — pour TOUTES les notes, pas seulement les bonnes.
+   *
+   * La version précédente n'envoyait vers Google que les 4 et 5 étoiles, et
+   * dirigeait les 1–3 vers un formulaire privé sans jamais leur proposer de
+   * publier. Cette pratique porte un nom, « review gating », et Google
+   * l'interdit explicitement : sanctions constatées, la suppression de *tous*
+   * les avis de l'établissement, la perte de classement, voire la suspension
+   * de la fiche. Pour un club dont la visibilité locale repose entièrement sur
+   * sa fiche Google, c'est un risque disproportionné.
+   *
+   * Ici, tout le monde reçoit la même proposition, et chacun garde le choix :
+   * un lien aussi visible permet d'écrire au club en privé au lieu de publier.
+   * Le levier de conversion — demander au bon moment, en un scan, avec un lien
+   * direct vers le formulaire — est intact ; seul le tri disparaît.
+   */
   useEffect(() => {
-    if (rating < 4 || redirectStarted.current) return;
-    redirectStarted.current = true;
+    // `privateMode` fait partie des dépendances : passer en écriture privée
+    // doit réellement arrêter le compte à rebours. Sans cela, le visiteur
+    // cliquait « écrire au club » et se retrouvait quand même expédié sur
+    // Google deux secondes plus tard.
+    if (rating === 0 || privateMode) return;
 
     const timer = setInterval(() => {
       setCountdown((prev) => {
@@ -47,7 +108,7 @@ export default function AvisPage({ params }: { params: Promise<{ locale: string 
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [rating]);
+  }, [rating, privateMode]);
 
   // Handle negative/neutral feedback submit (1, 2, or 3 stars)
   const handleSubmitFeedback = async (e: React.FormEvent) => {
@@ -175,8 +236,46 @@ export default function AvisPage({ params }: { params: Promise<{ locale: string 
                   </div>
                 </div>
               </motion.div>
-            ) : rating >= 4 ? (
-              /* Etape 2 (Positive): Gating vers Google */
+            ) : isSubmitted ? (
+              /* Etape 3 : retour privé enregistré — le lien Google reste offert,
+                 pour ne fermer aucune porte à quelqu'un qui vient de s'exprimer. */
+              <motion.div
+                key="step-success"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="card card-lift bg-white p-8 border border-gray-100 text-center"
+              >
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                  <CheckCircle2 className="h-7 w-7" />
+                </div>
+
+                <h2 className="font-display text-2xl font-bold t-title leading-tight">
+                  {locale === 'fr' ? 'Merci beaucoup !' : locale === 'ar' ? 'شكراً جزيلاً!' : locale === 'es' ? '¡Muchas gracias!' : 'Thank you!'}
+                </h2>
+
+                <p className="mt-3 text-sm t-soft leading-relaxed px-2">
+                  {t.review?.feedbackSuccess || 'Merci pour vos remarques ! Votre retour a été envoyé directement à la direction pour nous aider à nous améliorer.'}
+                </p>
+
+                <div className="mt-8 border-t hair pt-6 space-y-3">
+                  <button
+                    onClick={handleManualGoogleRedirect}
+                    className="btn-gold w-full py-3 text-sm font-bold cursor-pointer"
+                  >
+                    {C.alsoGoogle}
+                  </button>
+                  <Link
+                    href={`/${locale}`}
+                    className="btn-outline w-full py-3 text-sm font-semibold cursor-pointer"
+                  >
+                    {locale === 'fr' ? 'Retourner à l\'accueil' : locale === 'ar' ? 'الرجوع للرئيسية' : locale === 'es' ? 'Volver al inicio' : 'Back to Home'}
+                  </Link>
+                </div>
+              </motion.div>
+            ) : !privateMode ? (
+              /* Etape 2 : proposition de publier sur Google — identique pour
+                 toutes les notes. Seul le ton du texte suit la note ; l'offre,
+                 elle, est la même pour tout le monde. */
               <motion.div
                 key="step-positive"
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -189,12 +288,14 @@ export default function AvisPage({ params }: { params: Promise<{ locale: string 
                 <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-gold/20 relative z-10 animate-bounce">
                   <Sparkles className="h-8 w-8 text-gold" />
                 </div>
-                
+
                 <h2 className="font-display text-3xl font-bold t-title leading-tight relative z-10">
-                  {t.review?.positiveTitle || 'Merci pour votre soutien !'}
+                  {rating >= 4 ? (t.review?.positiveTitle || 'Merci pour votre soutien !') : C.lowTitle}
                 </h2>
                 <p className="mt-4 text-sm t-soft leading-relaxed relative z-10 px-2">
-                  {t.review?.positiveSubtitle || 'Nous sommes ravis que vous ayez apprécié votre expérience. Aidez-nous à nous faire connaître en partageant votre avis sur Google !'}
+                  {rating >= 4
+                    ? (t.review?.positiveSubtitle || 'Nous sommes ravis que vous ayez apprécié votre expérience. Aidez-nous à nous faire connaître en partageant votre avis sur Google !')
+                    : C.lowSubtitle}
                 </p>
 
                 <div className="mt-8 border-t hair pt-6 relative z-10">
@@ -205,14 +306,24 @@ export default function AvisPage({ params }: { params: Promise<{ locale: string 
                     {t.review?.googleButton || 'Laisser un avis sur Google'}
                     <span className="group-hover:translate-x-1 transition-transform">→</span>
                   </button>
-                  
+
                   <p className="mt-4 text-xs t-muted flex items-center justify-center gap-1.5">
                     <span className="inline-block h-2 w-2 rounded-full bg-gold animate-ping" />
                     {t.review?.redirecting || 'Vous allez être redirigé vers Google...'} ({countdown}s)
                   </p>
+
+                  {/* Alternative, offerte à tout le monde et au même endroit,
+                      quelle que soit la note. Elle arrête le compte à rebours. */}
+                  <button
+                    type="button"
+                    onClick={() => setPrivateMode(true)}
+                    className="mt-5 w-full text-xs t-soft underline underline-offset-4 hover:t-title transition-colors cursor-pointer"
+                  >
+                    {C.privateLink}
+                  </button>
                 </div>
               </motion.div>
-            ) : !isSubmitted ? (
+            ) : (
               /* Etape 2 (Négative): Formulaire de feedback interne */
               <motion.div
                 key="step-negative"
@@ -223,7 +334,7 @@ export default function AvisPage({ params }: { params: Promise<{ locale: string 
               >
                 <button
                   type="button"
-                  onClick={() => setRating(0)}
+                  onClick={() => { setRating(0); setPrivateMode(false); setCountdown(3); }}
                   className="flex items-center gap-1 text-xs t-muted hover:text-foreground mb-4 transition-colors cursor-pointer"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
@@ -291,35 +402,6 @@ export default function AvisPage({ params }: { params: Promise<{ locale: string 
                     )}
                   </button>
                 </form>
-              </motion.div>
-            ) : (
-              /* Etape 3 (Négative Succès): Confirmation de feedback enregistré */
-              <motion.div
-                key="step-success"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="card card-lift bg-white p-8 border border-gray-100 text-center"
-              >
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                  <CheckCircle2 className="h-7 w-7" />
-                </div>
-                
-                <h2 className="font-display text-2xl font-bold t-title leading-tight">
-                  {locale === 'fr' ? 'Merci beaucoup !' : locale === 'ar' ? 'شكراً جزيلاً!' : 'Thank you!'}
-                </h2>
-                
-                <p className="mt-3 text-sm t-soft leading-relaxed px-2">
-                  {t.review?.feedbackSuccess || 'Merci pour vos remarques ! Votre retour a été envoyé directement à la direction pour nous aider à nous améliorer.'}
-                </p>
-
-                <div className="mt-8 border-t hair pt-6">
-                  <Link
-                    href={`/${locale}`}
-                    className="btn-outline w-full py-3 text-sm font-semibold cursor-pointer"
-                  >
-                    {locale === 'fr' ? 'Retourner à l\'accueil' : locale === 'ar' ? 'الرجوع للرئيسية' : 'Back to Home'}
-                  </Link>
-                </div>
               </motion.div>
             )}
           </AnimatePresence>
