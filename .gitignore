@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Journal du CLI Firebase (détails de requêtes : ne jamais committer)
 firebase-debug.log
+
+# Captures et journaux du navigateur de test
+.playwright-mcp/

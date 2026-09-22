@@ -82,55 +82,86 @@ function demoVisitors(date: Date): number {
   return Math.round(46 + wave + weekend);
 }
 
+// Numéros volontairement fictifs (+212 600 000 0xx, et la plage britannique
+// +44 7700 900xxx réservée à la fiction) : chaque ligne du tableau de bord a
+// un bouton WhatsApp, un clic pendant une démonstration ne doit ouvrir aucune
+// conversation avec un inconnu.
 const DEMO_NAMES: Array<[string, string, string, number]> = [
-  ['Yassine Belghiti', '+212661234567', 'Intermédiaire', 4],
-  ['Sara El Amrani', '+212677889900', 'Débutante', 2],
-  ['Mehdi Chraibi', '+212655443322', 'Avancé (niveau 4)', 4],
-  ['Carlos Pérez', '+34612345678', 'Intermedio', 3],
-  ['Nadia Tazi', '+212668112233', 'Intermédiaire', 4],
-  ['Omar Bennis', '+212699887766', 'Débutant', 2],
-  ['Emma Wilson', '+447911123456', 'Intermediate', 4],
+  ['Yassine Belghiti', '+212600000017', 'Intermédiaire', 4],
+  ['Sara El Amrani', '+212600000018', 'Débutante', 2],
+  ['Mehdi Chraibi', '+212600000019', 'Avancé (niveau 4)', 4],
+  ['Carlos Pérez', '+212600000020', 'Intermedio', 3],
+  ['Nadia Tazi', '+212600000021', 'Intermédiaire', 4],
+  ['Omar Bennis', '+212600000022', 'Débutant', 2],
+  ['Emma Wilson', '+447700900002', 'Intermediate', 4],
+  ['Amine Ouazzani', '+212600000001', 'Intermédiaire', 4],
+  ['Lina Berrada', '+212600000002', 'Débutante', 2],
+  ['Hamza El Idrissi', '+212600000003', 'Avancé', 4],
+  ['Salma Kettani', '+212600000004', 'Intermédiaire', 4],
+  ['Youssef Alaoui', '+212600000005', 'Confirmé', 4],
+  ['Ines Benjelloun', '+212600000006', 'Débutante', 2],
+  ['Rachid Fassi', '+212600000007', 'Intermédiaire', 4],
+  ['Kenza Lahlou', '+212600000008', 'Intermédiaire', 3],
+  ['Anas Tahiri', '+212600000009', 'Avancé', 4],
+  ['Meryem Sebti', '+212600000010', 'Débutante', 2],
+  ['Javier Morales', '+212600000011', 'Avanzado', 4],
+  ['Lucía Fernández', '+212600000012', 'Intermedio', 4],
+  ['Thomas Girard', '+212600000013', 'Intermédiaire', 4],
+  ['Camille Martin', '+212600000014', 'Débutante', 2],
+  ['James Carter', '+447700900001', 'Advanced', 4],
+  ['Othmane Rami', '+212600000015', 'Intermédiaire', 4],
+  ['Zineb Chami', '+212600000016', 'Intermédiaire', 4],
 ];
 
 // Réservations de démonstration. Les créneaux et les terrains sont ceux que le
 // club propose réellement (`slotsOfDay`) : sans cela, le planning des terrains
 // resterait vide pendant une présentation, chaque demande tombant « hors
-// grille ». Deux clients reviennent deux fois — c'est ce qui fait apparaître la
-// carte « clients fidèles ».
+// grille ». Une semaine complète est semée, avec une rotation de clients qui
+// reviennent : c'est ce qui fait vivre le remplissage et les clients fidèles.
 function seedDemoBookings() {
   const now = Date.now();
   const today = format(new Date(), 'yyyy-MM-dd');
   const slots = slotsOfDay(today);
-  // Créneaux du soir : ceux qui se remplissent vraiment dans un club de padel.
-  const evening = slots.slice(-5);
-  const pick = (i: number) => evening[i % evening.length] ?? slots[0];
 
-  const plan: Array<[number, number, number]> = [
-    // [index du client, jour (+n), terrain]
-    [0, 0, 1], [1, 0, 2], [2, 0, 3], [3, 0, 1],
-    [4, 1, 1], [5, 1, 2], [6, 1, 3],
-    [0, 2, 2], [2, 2, 4],
-  ];
+  // Profil de fréquentation d'un club qui tourne : matinées calmes, soirées
+  // pleines. Un nombre de terrains occupés par créneau, dans l'ordre des
+  // créneaux de la journée ; le week-end remplit aussi l'après-midi.
+  // La première version ne semait que 9 réservations : le tableau de bord
+  // affichait « Remplissage 3 % » pendant la démonstration — ce qu'un gérant
+  // lit comme « club vide », exactement l'inverse du message.
+  const weekday = [0, 1, 1, 0, 1, 2, 3, 4, 4, 2];
+  const weekend = [1, 2, 2, 2, 3, 3, 4, 4, 4, 3];
 
-  plan.forEach(([nameIdx, dayOffset, court], i) => {
-    const [name, phone, level, players] = DEMO_NAMES[nameIdx];
-    const date = format(addDays(new Date(), dayOffset), 'yyyy-MM-dd');
-    saveBooking({
-      id: `demo_${now}_${i}`,
-      name,
-      phone,
-      level,
-      players,
-      court,
-      date,
-      time_slot: pick(i),
-      // La plus récente reste « en attente » : le gérant a quelque chose à
-      // traiter à l'écran, bouton Confirmer compris.
-      status: i === 0 ? 'pending' : 'confirmed',
-      created_at: new Date(now - i * 47 * 60 * 1000).toISOString(),
-      club_slug: clubConfig.slug,
-    } as StoredBooking);
-  });
+  let i = 0;
+  for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+    const day = addDays(new Date(), dayOffset);
+    const profile = [0, 6].includes(day.getDay()) ? weekend : weekday;
+    const date = format(day, 'yyyy-MM-dd');
+    slots.forEach((time_slot, s) => {
+      const count = Math.min(COURTS.length, profile[s] ?? 0);
+      for (let court = 1; court <= count; court++) {
+        // Rotation des clients : certains reviennent plusieurs fois dans la
+        // semaine, ce qui alimente la carte « clients fidèles ».
+        const [name, phone, level, players] = DEMO_NAMES[i % DEMO_NAMES.length];
+        saveBooking({
+          id: `demo_${now}_${i}`,
+          name,
+          phone,
+          level,
+          players,
+          court,
+          date,
+          time_slot,
+          // Les demandes les plus proches restent « en attente » : le gérant a
+          // de quoi traiter à l'écran, bouton Confirmer compris.
+          status: dayOffset === 0 && court === count && s >= slots.length - 3 ? 'pending' : 'confirmed',
+          created_at: new Date(now - i * 37 * 60 * 1000).toISOString(),
+          club_slug: clubConfig.slug,
+        } as StoredBooking);
+        i++;
+      }
+    });
+  }
 }
 
 function seedDemoFeedbacks() {
