@@ -57,13 +57,67 @@ dans le tableau de bord sur un autre appareil.
 
 En mode synchronisé, tout ce qui relève de la démonstration disparaît du
 tableau de bord : badge « Aperçu démo », bouton « Données de démo », KPI
-visiteurs/conversion et scores « présence web » (chiffres illustratifs). Le
-graphique passe aux réservations réelles par jour. Le gérant ne voit que des
-données vraies.
+visiteurs et conversion (chiffres illustratifs). Le graphique passe aux
+réservations réelles par jour. Le gérant ne voit que des données vraies.
+
+**Ce qui reste, et qui constitue l'outil au quotidien**, calculé sur les vraies
+réservations et identique en démonstration comme en production :
+
+| Bloc | Ce qu'il répond |
+|---|---|
+| **Planning des terrains** | Qui joue, sur quel terrain, à quelle heure — aujourd'hui, demain, après-demain. Les demandes non confirmées apparaissent en pointillés or : c'est ce qu'il reste à rappeler. |
+| **Remplissage (7 jours à venir)** | Quelle part des créneaux est vendue, et donc ce qu'il reste à vendre. |
+| **Revenus du mois** | Créneaux réservés × tarif. |
+| **Clients** | Nombre de clients uniques et d'habitués (identifiés par numéro), avec WhatsApp en un clic. |
+| **Heures de pointe** | Les créneaux les plus demandés — sur quoi ajuster les tarifs et les horaires de personnel. |
+| **Export** | Toutes les réservations en `.csv`, ouvrable dans Excel. |
+| **Visibilité web** | Quatre liens cliquables vers ce que Google et les IA lisent réellement (`sitemap.xml`, `llms.txt`, `robots.txt`, langues). |
+
+> Les scores « /100 » de présence web ont été retirés : ils étaient inventés.
+> Un gérant ne doit pas prendre de décision sur un chiffre que personne ne
+> mesure — les liens, eux, se vérifient d'un clic.
 
 ---
 
-## 2. Avis Google
+## 2. Audience du site (1 clic, gratuit)
+
+Le site envoie déjà ses statistiques de fréquentation à **Vercel Analytics**
+(sans cookie, sans bannière de consentement). Il reste à l'activer une fois :
+
+> Vercel → le projet → onglet **Analytics** → **Enable**.
+
+Sans cette activation, aucune donnée n'est collectée et le club n'a **aucun**
+chiffre de fréquentation réel — le KPI « visiteurs » du tableau de bord n'est
+qu'une démonstration et disparaît en production. Les chiffres se consultent
+dans Vercel, pas dans l'espace gérant.
+
+---
+
+## 3. Avis Google
+
+### Comment fonctionne la page `/avis` (QR code du club)
+
+Le client scanne le QR, donne une note de 1 à 5, puis — **quelle que soit la
+note** — se voit proposer deux choses au même endroit :
+
+1. **Publier son avis sur Google** (bouton principal, redirection automatique
+   après 3 secondes) ;
+2. **Écrire au club en privé** (lien juste en dessous), qui arrête la
+   redirection et ouvre un formulaire. Ce retour arrive dans l'onglet
+   « Retours clients » du tableau de bord, et le client se voit quand même
+   proposer de publier sur Google à la fin.
+
+> ⚠️ **Ne pas revenir à un filtrage par note.** Une version précédente
+> n'envoyait vers Google que les 4 et 5 étoiles. Cette pratique s'appelle
+> « review gating » et Google l'interdit explicitement. Sanctions constatées :
+> suppression de **tous** les avis de l'établissement, perte de classement,
+> suspension de la fiche — détection automatisée, 292 millions d'avis
+> supprimés en 2025. Pour un club dont la visibilité locale repose entièrement
+> sur sa fiche Google, le risque est disproportionné par rapport au gain.
+> Le vrai levier de conversion est conservé : demander au bon moment, en un
+> scan, avec un lien qui ouvre directement le formulaire de notation.
+
+### Lien direct vers le formulaire
 
 `googlePlaceId` est **vide** dans [`src/config/club.config.ts`](src/config/club.config.ts).
 Conséquence : le QR code affiché au club et le bouton « Laisser un avis »
@@ -75,7 +129,7 @@ puis le renseigner dans `googlePlaceId`.
 
 ---
 
-## 3. Mentions légales
+## 4. Mentions légales
 
 [`src/app/[locale]/mentions-legales/page.tsx`](src/app/[locale]/mentions-legales/page.tsx)
 contient trois champs `[à compléter par le gérant]` : raison sociale et forme
@@ -84,7 +138,25 @@ Obligation légale au Maroc.
 
 ---
 
-## 4. Photos
+## 5. Fiche Google : données à recaler
+
+Relevé sur la fiche Google réelle du club (septembre 2026), à confronter avec
+[`club.config.ts`](src/config/club.config.ts) :
+
+| Donnée | Le site affiche | La fiche Google affiche |
+|---|---|---|
+| Nombre d'avis | 18 | **27** |
+| Horaires | 09:00 – 00:00 | **07:00 – 00:00** |
+
+Des horaires qui se contredisent entre le site et la fiche Google nuisent au
+référencement local (Google compare les deux) et font perdre des réservations
+matinales. À faire confirmer par le gérant, puis corriger dans la config —
+`openingHours` alimente aussi les créneaux de réservation, le balisage
+schema.org et `/llms.txt`.
+
+---
+
+## 6. Photos
 
 Les visuels de `public/clubs/golden/` font 640 px de large (sauf `5.jpg`).
 Ils sont affichés jusqu'à ~1300 px sur écran retina, donc visiblement flous.

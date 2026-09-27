@@ -22,9 +22,15 @@ export default function About({ locale }: { locale: string }) {
 
           <div className="relative" data-reveal>
             <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] card-lift">
+              {/* Une photo du club, pas une affiche de tournoi. 2.jpg était un
+                  visuel promotionnel (visages détourés, coups de peinture rouge,
+                  logos de sponsors) : sur la section qui raconte le lieu, il
+                  cassait le ton éditorial et ne montrait pas les installations.
+                  L'affiche garde sa place en galerie, où elle est à sa
+                  place. */}
               <Image
-                src="/clubs/golden/2.jpg"
-                alt="Golden Padel Club — installations"
+                src="/clubs/golden/6.jpg"
+                alt="Golden Padel Club — un joueur sur un terrain indoor, vue sur l'accueil du club"
                 fill
                 sizes="(min-width: 1024px) 46vw, 92vw"
                 className="object-cover"

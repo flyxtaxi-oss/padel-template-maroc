@@ -99,6 +99,14 @@ export default function Footer({ locale }: { locale: string }) {
           </div>
         </div>
       </div>
+
+      {/* Signature typographique géante, rognée par le bas de page : purement
+          décorative (aria-hidden), le nom du club est déjà lu plus haut. */}
+      <div aria-hidden className="pointer-events-none select-none overflow-hidden">
+        <p dir="ltr" className="mx-auto -mb-[0.18em] max-w-7xl whitespace-nowrap px-6 text-center font-display text-[clamp(3.5rem,15.5vw,13.5rem)] font-semibold leading-[1] tracking-[-0.03em] text-cream/[0.07]">
+          Golden <span className="italic">Padel</span>
+        </p>
+      </div>
     </footer>
   );
 }

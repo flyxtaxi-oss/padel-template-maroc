@@ -61,6 +61,18 @@ export type ClubConfig = {
     mediaPath: string;
     isVideo: boolean;
     pitch: LocalizedString;
+    /**
+     * Aperçu flou de la photo du hero, en base64 (~0,5 Ko, inline dans le HTML).
+     * Affiché INSTANTANÉMENT pendant que la vraie photo est optimisée puis
+     * téléchargée. Sans lui, le premier visiteur d'un nouveau déploiement voit
+     * un rectangle noir pendant plusieurs secondes — le temps que le serveur
+     * encode l'image — et c'est sa première impression du club.
+     * Régénérer après tout changement de `mediaPath` :
+     *   node -e "require('sharp')('public/…/x.jpg').resize(12,16,{fit:'cover'})
+     *            .jpeg({quality:45}).toBuffer().then(b=>console.log(
+     *            'data:image/jpeg;base64,'+b.toString('base64')))"
+     */
+    blurDataURL?: string;
   };
   about: {
     text: LocalizedString;
@@ -117,8 +129,13 @@ const goldenConfig: ClubConfig = {
     accent: '#1062ae', // Vibrant Padel Blue
   },
   hero: {
-    mediaPath: '/clubs/golden/1.jpg',
+    // 5.jpg est la seule photo fournie en 1080 px (les autres sont en 640) et
+    // c'est aussi la seule où le mur « GOLDEN PADEL CLUB » et le bleu du
+    // terrain apparaissent. En hero, une photo deux fois plus définie se voit
+    // immédiatement : c'est le premier écran, et la moitié de l'impression.
+    mediaPath: '/clubs/golden/5.jpg',
     isVideo: false,
+    blurDataURL: 'data:image/jpeg;base64,/9j/2wBDABIMDRANCxIQDhAUExIVGywdGxgYGzYnKSAsQDlEQz85Pj1HUGZXR0thTT0+WXlaYWltcnNyRVV9hnxvhWZwcm7/2wBDARMUFBsXGzQdHTRuST5Jbm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm7/wAARCAAQAAwDASIAAhEBAxEB/8QAFwAAAwEAAAAAAAAAAAAAAAAAAgMEBv/EAB4QAAICAgMBAQAAAAAAAAAAAAECAxEAEgQhUSKh/8QAFQEBAQAAAAAAAAAAAAAAAAAAAgP/xAAZEQEAAgMAAAAAAAAAAAAAAAABAAIREjH/2gAMAwEAAhEDEQA/AMsJLi2MjbNZN/mKeEE/NsK6IGVoYH4jNoSFGps99eYPHll4qmNpAnd0D7l9bdxAtRQZ/9k=',
     pitch: {
       fr: 'Découvrez des installations modernes et une ambiance chaleureuse au cœur de Tanger. Le point de rencontre des passionnés de padel.',
       en: 'Discover modern facilities and a warm atmosphere in the heart of Tangier — the meeting point for padel enthusiasts.',
@@ -160,14 +177,19 @@ const goldenConfig: ClubConfig = {
   openingHours: {
     'Tous les jours': '09:00 - 00:00',
   },
+  // Photos de la section Galerie, dans l'ordre des cadres de la grille
+  // éditoriale (voir Gallery.tsx) : paysage, portrait haut, portrait haut,
+  // portrait, paysage. Les cinq premières sont utilisées.
+  //
+  // 5.jpg (hero) et 6.jpg (section « À propos ») sont volontairement absentes :
+  // revoir la même photo deux écrans plus bas donne l'impression d'un club qui
+  // n'en a que deux.
   gallery: [
-    '/clubs/golden/2.jpg',
-    '/clubs/golden/3.jpg',
     '/clubs/golden/4.jpg',
-    '/clubs/golden/5.jpg',
-    '/clubs/golden/6.jpg',
-    '/clubs/golden/7.jpg',
     '/clubs/golden/8.jpg',
+    '/clubs/golden/3.jpg',
+    '/clubs/golden/7.jpg',
+    '/clubs/golden/2.jpg',
   ],
   // ⚠️ NE JAMAIS inventer d'avis. Ce tableau ne doit contenir que des avis
   // RÉELS, copiés depuis la fiche Google du club (ou laissé vide).

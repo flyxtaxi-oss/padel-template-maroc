@@ -13,13 +13,31 @@ const InstagramIcon = ({ className }: { className?: string }) => (
 
 export default function Gallery({ locale }: { locale: string }) {
   const t = getDictionary(locale);
-  const curatedImages = [
-    { src: '/clubs/golden/6.jpg', className: 'md:col-span-8 aspect-[16/10]', sizes: '(min-width: 768px) 62vw, 92vw' },
-    { src: '/clubs/golden/3.jpg', className: 'md:col-span-4 aspect-square', sizes: '(min-width: 768px) 31vw, 92vw' },
-    { src: '/clubs/golden/4.jpg', className: 'md:col-span-4 aspect-square', sizes: '(min-width: 768px) 31vw, 92vw' },
-    { src: '/clubs/golden/7.jpg', className: 'md:col-span-4 aspect-square', sizes: '(min-width: 768px) 31vw, 92vw' },
-    { src: '/clubs/golden/8.jpg', className: 'md:col-span-4 aspect-square', sizes: '(min-width: 768px) 31vw, 92vw' },
+  /**
+   * Grille éditoriale à rangées fixes : chaque photo reçoit un cadre adapté à
+   * son format d'origine (paysage large, portraits hauts) au lieu d'être
+   * recadrée en carré. Sur mobile, une colonne en 4:3.
+   *
+   * La MISE EN PAGE vit ici (c'est une décision de design, pas une donnée),
+   * mais les PHOTOS viennent de `club.config.ts`. Auparavant la liste était
+   * écrite en dur ici pendant que la config déclarait un tableau `gallery`
+   * que personne ne lisait : changer la config ne changeait rien à l'écran —
+   * exactement le genre de piège qui fait perdre une heure sur le deuxième
+   * club. L'ordre des photos dans la config suit l'ordre des cadres
+   * ci-dessous : paysage, portrait haut, portrait haut, portrait, paysage.
+   */
+  const slots = [
+    { className: 'md:col-span-7 md:row-span-2', sizes: '(min-width: 768px) 58vw, 92vw' },
+    { className: 'md:col-span-5 md:row-span-3', sizes: '(min-width: 768px) 42vw, 92vw' },
+    { className: 'md:col-span-4 md:row-span-3', sizes: '(min-width: 768px) 33vw, 92vw' },
+    { className: 'md:col-span-3 md:row-span-3', sizes: '(min-width: 768px) 25vw, 92vw' },
+    { className: 'md:col-span-5 md:row-span-2', sizes: '(min-width: 768px) 42vw, 92vw' },
   ];
+
+  // Un club qui fournit moins de photos affiche moins de cadres, sans trou.
+  const curatedImages = clubConfig.gallery
+    .slice(0, slots.length)
+    .map((src, i) => ({ src, ...slots[i] }));
 
   return (
     <section id="gallery" className="section bg-sand">
@@ -43,16 +61,19 @@ export default function Gallery({ locale }: { locale: string }) {
           </a>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+        <div className="grid grid-cols-1 gap-4 md:grid-flow-dense md:grid-cols-12 md:auto-rows-[170px] lg:auto-rows-[190px]">
           {curatedImages.map((img, i) => (
-            <div key={i} data-reveal style={{ '--reveal-delay': `${i * 70}ms` } as React.CSSProperties} className={`group relative overflow-hidden rounded-[1.25rem] card-lift ${img.className}`}>
+            <div key={i} data-reveal style={{ '--reveal-delay': `${i * 70}ms` } as React.CSSProperties} className={`group relative aspect-[4/3] overflow-hidden rounded-[1.25rem] card-lift md:aspect-auto ${img.className}`}>
               <Image
                 src={img.src}
                 alt={`${clubConfig.name} — photo ${i + 1}`}
                 fill
                 sizes={img.sizes}
-                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                className="object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]"
               />
+              <span aria-hidden className="absolute bottom-3 end-3 rounded-full bg-court-deep/70 px-2.5 py-1 font-mono text-[0.68rem] tracking-[0.08em] text-cream/85">
+                {String(i + 1).padStart(2, '0')}
+              </span>
             </div>
           ))}
         </div>

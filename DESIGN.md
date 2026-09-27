@@ -47,6 +47,13 @@ Tournois crème → FAQ ivoire → **Avis bleu** → Contact crème → **Footer
 > qui est le token de thème). Les nommer pareil crée une référence circulaire qui
 > invalide la variable : tous les `.font-mono` retombent silencieusement sur Inter.
 
+### Compositions signature
+| Zone | Règle |
+|------|-------|
+| Hero | **Image-first** : photo du club plein écran (`min-h-[100svh]`), voiles bleu terrain (jamais noir), titre ancré en bas, rail d'infos à filets fins en pied — pas de cartes de stats. |
+| Galerie | Grille éditoriale à rangées fixes (`auto-rows`) : chaque photo garde un cadre proche de son format (paysage large, portraits hauts). Repère `01…` en mono. |
+| Footer | Signature « Golden *Padel* » géante, crème à 7 %, rognée par le bas, `aria-hidden`. |
+
 ### Élévation
 | Classe | Usage |
 |--------|-------|
@@ -66,8 +73,10 @@ mélanger avec les `shadow-*` de Tailwind.
 
 ### Mouvement
 - `[data-reveal]` : le bloc monte et apparaît à l'entrée dans le viewport.
-- `<WordReveal>` : titre révélé **mot à mot** (y 20px → 0, 0.8 s,
-  `cubic-bezier(0.16, 1, 0.3, 1)`, décalage 0.07 s/mot, une seule fois).
+- `<WordReveal>` : titre révélé **mot à mot à travers un masque** (skill
+  « masked-reveal » : chaque mot monte de 110 % dans une fenêtre
+  `overflow: hidden`, 0.9 s, `cubic-bezier(0.16, 1, 0.3, 1)`, décalage
+  0.05 s/mot, une seule fois).
   Réservé aux titres courts. **Ne jamais imbriquer** un `<WordReveal>` dans un
   `[data-reveal]` : les deux translations se cumulent et le texte part de trop loin.
   Sur une page RTL, un titre en écriture latine (nom de marque) doit recevoir

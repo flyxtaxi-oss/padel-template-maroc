@@ -25,6 +25,19 @@ const nextConfig: NextConfig = {
     // AVIF avant WebP : ~30 % plus léger que WebP sur des photos de terrain.
     // Compte pour beaucoup sur mobile 4G marocaine, cible principale du site.
     formats: ["image/avif", "image/webp"],
+    // Largeurs que le site est autorisé à demander.
+    //
+    // Par défaut Next monte jusqu'à 3840 px. Sur un écran large, le hero
+    // (`sizes="100vw"`) réclamait donc une version 3840 px… d'une photo qui
+    // fait 1080 px de large. Le serveur partait encoder en AVIF une image
+    // agrandie quatre fois : plusieurs secondes de calcul pendant lesquelles
+    // le hero restait NOIR, pour un résultat plus flou que l'original.
+    // Plafonner à 1920 px supprime ce travail inutile — et sur Vercel, chaque
+    // variante générée est facturée.
+    // ⚠️ À relever le jour où le club fournira ses photos en haute définition.
+    // La plus grande photo fournie fait 1080 px : au-delà, on ferait encoder
+    // au serveur un agrandissement plus lourd ET plus flou que l'original.
+    deviceSizes: [640, 750, 828, 1080, 1200],
   },
 };
 
