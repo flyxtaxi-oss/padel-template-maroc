@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import clubConfig from '@/config/club.config';
+import defaultClub, { type ClubConfig } from '@/config/club.config';
 import WordReveal from '@/components/WordReveal';
 import { Baby, Sprout, Target, MessageCircle, ArrowRight } from 'lucide-react';
 
@@ -94,7 +94,9 @@ const COPY: Record<string, Copy> = {
 
 const ICONS = [Baby, Sprout, Target];
 
-export default function Academy({ locale }: { locale: string }) {
+export default function Academy({ locale, club = defaultClub }: { locale: string; club?: ClubConfig }) {
+  // Réglages en vigueur (onglet « Mon club » du gérant), par défaut ceux du dépôt.
+  const clubConfig = club;
   const c = COPY[locale] || COPY.fr;
   const digits = clubConfig.contact.whatsapp.replace(/[^0-9]/g, '');
   const wa = (text: string) => `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;

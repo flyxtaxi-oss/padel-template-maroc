@@ -22,7 +22,10 @@ leur téléphone **n'y apparaissent jamais**.
    de bord.
 3. Onglet **Règles** → coller le contenu de [`firestore.rules`](firestore.rules) → **Publier**.
    Ces règles autorisent le site à créer une demande, et interdisent à quiconque
-   de lire les numéros de téléphone depuis un navigateur.
+   de lire les numéros de téléphone depuis un navigateur. Elles imposent aussi
+   une liste fermée de champs, des tailles maximales et le statut « en attente » :
+   personne ne peut écrire directement une réservation « confirmée ».
+   **À republier après chaque modification de `firestore.rules`.**
 
 ### b. Variables d'environnement Vercel
 `Settings → Environment Variables`, pour l'environnement **Production** :
@@ -36,16 +39,49 @@ leur téléphone **n'y apparaissent jamais**.
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | idem | idem |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | idem | idem |
 | `FIREBASE_SERVICE_ACCOUNT` | Firebase → Paramètres → **Comptes de service** → Générer une clé privée | lecture serveur (tableau de bord) |
-| `ADMIN_CODE` | à choisir | code gérant, vérifié **côté serveur** |
-| `NEXT_PUBLIC_ADMIN_CODE` | **la même valeur** que `ADMIN_CODE` | pré-contrôle côté navigateur |
+| `ADMIN_CODE` | à choisir : **16 caractères ou plus**, aléatoires | code gérant, vérifié **uniquement côté serveur** |
 
 > `FIREBASE_SERVICE_ACCOUNT` : coller le JSON **entier, sur une seule ligne**.
 > C'est l'erreur la plus fréquente. En cas de problème, le tableau de bord
 > affiche la cause exacte (JSON invalide, champ manquant…) dans son bandeau.
 
-> `ADMIN_CODE` et `NEXT_PUBLIC_ADMIN_CODE` doivent être **identiques**. Le
-> serveur fait autorité ; le code public n'est qu'un pré-filtre et reste
-> lisible dans le JavaScript — ce n'est pas un secret.
+> ⚠️ **Ne créez plus `NEXT_PUBLIC_ADMIN_CODE`** et supprimez-la si elle existe.
+> Tout ce qui commence par `NEXT_PUBLIC_` est écrit dans le JavaScript public :
+> l'ancienne consigne (« même valeur que `ADMIN_CODE` ») rendait le code gérant
+> lisible par n'importe qui, et avec lui les téléphones de tous les clients.
+> Si cette variable a déjà été en ligne, **changez aussi `ADMIN_CODE`** : l'ancien
+> code doit être considéré comme connu.
+
+### Ce que le gérant fait lui-même (onglet « Mon club »)
+
+Dans l'espace gérant, deux vues : **Activité** (réservations, planning,
+statistiques) et **Mon club**. Dans « Mon club », il modifie sans passer par
+nous : tarifs, horaires, fermetures exceptionnelles, téléphone / WhatsApp /
+Instagram / adresse, textes du site (4 langues) et tournois. « Enregistrer »
+met à jour le site, Google (données structurées), l'aperçu WhatsApp et
+`llms.txt` en quelques secondes. Stockage : Firestore `club_settings/{slug}`,
+écrit uniquement par le serveur.
+
+Bouton **« Nouvelle réservation »** : pour un client qui appelle ou passe au
+comptoir. Même transaction que le site : le créneau disparaît aussitôt des
+disponibilités en ligne. Chaque réservation garde le prix du jour
+(`price_mad`) : changer un tarif ne réécrit pas les revenus passés.
+
+Pas encore dans « Mon club » : les photos (à remplacer par nous, cf. §6).
+
+
+- Lien discret **« Espace club »** en pied de page (dans les 4 langues), ou
+  directement `https://<domaine>/fr/admin`. Page exclue de Google.
+- Code saisi **une fois** : la session dure **30 jours** sur l'appareil (cookie
+  sécurisé, illisible par le JavaScript de la page). Bouton de déconnexion en
+  haut à droite du tableau de bord.
+- **5 codes faux** depuis la même adresse → essais bloqués **15 minutes**.
+- Changer `ADMIN_CODE` sur Vercel (puis redéployer) **déconnecte toutes les
+  sessions** : à faire si un téléphone du club est perdu ou si un employé part.
+- Sur téléphone : ouvrir l'espace, puis « Ajouter à l'écran d'accueil » pour
+  avoir une icône comme une application.
+- Transmettre le code au gérant de vive voix ou en message privé, jamais par
+  e-mail groupé ni dans un fichier partagé.
 
 ### c. Vérifier
 Après redéploiement, ouvrir `/fr/admin` :
@@ -196,10 +232,13 @@ le formulaire passe automatiquement en **réservation instantanée** :
 - dans le tableau de bord, refuser une réservation instantanée **libère son
   terrain** ; la remettre en attente le reprend s'il est encore libre.
 
-Rien à ajouter dans `firestore.rules` : `slot_ledger` n'est lu et écrit que par
-le serveur, et la règle « tout le reste est fermé » l'interdit aux navigateurs.
+Rien à ajouter dans `firestore.rules` pour `slot_ledger`, `booking_phone_guard`
+(plafond de 4 créneaux à venir par numéro, stocké sous forme d'empreinte) et
+`admin_login_guard` (blocage des essais de code, sans adresse IP en clair) :
+ces collections ne sont lues et écrites que par le serveur, et la règle « tout
+le reste est fermé » les interdit aux navigateurs.
 Protections côté serveur : validation stricte, champ anti-robot, limite de
-6 tentatives / 10 min par IP.
+6 tentatives / 10 min par IP, et 4 créneaux à venir au plus par numéro.
 
 Sans Firebase, rien ne change : parcours « demande + WhatsApp ».
 

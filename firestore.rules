@@ -13,27 +13,56 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     match /booking_requests/{docId} {
-      // Création autorisée depuis le site, avec validation minimale du format.
+      // Création autorisée depuis le site (parcours « demande », quand la
+      // réservation instantanée serveur n'est pas active). Liste FERMÉE de
+      // champs, types et tailles bornés, et statut imposé à « pending » :
+      // personne ne peut écrire directement une réservation « confirmée »,
+      // ni gonfler un document avec des champs arbitraires.
       allow create: if
+        request.resource.data.keys().hasOnly([
+          'id', 'club_slug', 'date', 'time_slot', 'name', 'phone', 'level',
+          'players', 'created_at', 'locale', 'status', 'court'
+        ]) &&
+        request.resource.data.keys().hasAll(['club_slug', 'date', 'time_slot', 'name', 'phone', 'status']) &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.club_slug is string &&
+        request.resource.data.club_slug.size() < 60 &&
         request.resource.data.name is string &&
         request.resource.data.name.size() > 0 &&
         request.resource.data.name.size() < 120 &&
         request.resource.data.phone is string &&
         request.resource.data.phone.size() > 4 &&
         request.resource.data.phone.size() < 30 &&
-        request.resource.data.club_slug is string;
+        request.resource.data.date is string &&
+        request.resource.data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+        request.resource.data.time_slot is string &&
+        request.resource.data.time_slot.matches('^[0-9]{2}:[0-9]{2}$') &&
+        (!('level' in request.resource.data) || (request.resource.data.level is string && request.resource.data.level.size() < 60)) &&
+        (!('players' in request.resource.data) || (request.resource.data.players is int && request.resource.data.players >= 1 && request.resource.data.players <= 4)) &&
+        (!('locale' in request.resource.data) || (request.resource.data.locale is string && request.resource.data.locale.size() <= 5)) &&
+        (!('id' in request.resource.data) || (request.resource.data.id is string && request.resource.data.id.size() < 64)) &&
+        (!('created_at' in request.resource.data) || (request.resource.data.created_at is string && request.resource.data.created_at.size() < 40)) &&
+        (!('court' in request.resource.data) || request.resource.data.court == null || (request.resource.data.court is int && request.resource.data.court >= 1 && request.resource.data.court <= 20));
 
       // Aucune lecture / modification / suppression côté client.
       allow read, update, delete: if false;
     }
 
     match /feedbacks/{docId} {
-      // Création autorisée depuis le site pour recueillir les avis.
+      // Création autorisée depuis la page avis. Mêmes principes : champs
+      // listés, tailles bornées (un commentaire de plusieurs Mo n'a rien à
+      // faire dans le tableau de bord du gérant).
       allow create: if
+        request.resource.data.keys().hasOnly(['rating', 'comment', 'name', 'phone', 'created_at', 'club_slug']) &&
         request.resource.data.rating is int &&
         request.resource.data.rating >= 1 &&
         request.resource.data.rating <= 5 &&
-        request.resource.data.club_slug is string;
+        request.resource.data.club_slug is string &&
+        request.resource.data.club_slug.size() < 60 &&
+        (!('comment' in request.resource.data) || (request.resource.data.comment is string && request.resource.data.comment.size() < 2000)) &&
+        (!('name' in request.resource.data) || (request.resource.data.name is string && request.resource.data.name.size() < 120)) &&
+        (!('phone' in request.resource.data) || (request.resource.data.phone is string && request.resource.data.phone.size() < 40)) &&
+        (!('created_at' in request.resource.data) || (request.resource.data.created_at is string && request.resource.data.created_at.size() < 40));
 
       // Aucune lecture / modification / suppression côté client.
       allow read, update, delete: if false;

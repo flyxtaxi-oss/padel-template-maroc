@@ -1,9 +1,11 @@
 import WordReveal from '@/components/WordReveal';
-import clubConfig from '@/config/club.config';
+import defaultClub, { type ClubConfig } from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import { MapPin, Clock, Phone, MessageCircle } from 'lucide-react';
 
-export default function LocationHours({ locale }: { locale: string }) {
+export default function LocationHours({ locale, club = defaultClub }: { locale: string; club?: ClubConfig }) {
+  // Réglages en vigueur (onglet « Mon club » du gérant), par défaut ceux du dépôt.
+  const clubConfig = club;
   const t = getDictionary(locale);
   const { contact, openingHours, name } = clubConfig;
 

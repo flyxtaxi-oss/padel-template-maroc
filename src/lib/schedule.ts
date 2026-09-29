@@ -1,4 +1,4 @@
-import clubConfig from '@/config/club.config';
+import defaultClub, { type ClubConfig } from '@/config/club.config';
 
 // Fuseau du club. Le serveur Vercel tourne en UTC, le navigateur du visiteur
 // peut être n'importe où : on ramène tout le monde à l'heure de Tanger pour que
@@ -57,8 +57,8 @@ const fromMinutes = (mins: number): string => {
  * Plage d'ouverture du club en minutes depuis minuit.
  * '09:00 - 00:00' → { open: 540, close: 1440 } (minuit = fin de journée, pas 0h).
  */
-export function getOpeningRange(): { open: number; close: number } {
-  const ranges = Object.values(clubConfig.openingHours);
+export function getOpeningRange(club: ClubConfig = defaultClub): { open: number; close: number } {
+  const ranges = Object.values(club.openingHours);
   const raw = ranges[0] ?? '09:00 - 00:00';
   const [openRaw, closeRaw] = raw.split('-').map((s) => s.trim());
 
@@ -78,11 +78,13 @@ export function getOpeningRange(): { open: number; close: number } {
  * Construits depuis openingHours + slotDurationMinutes, moins bookedSlots,
  * moins les créneaux déjà passés si la date est aujourd'hui.
  * Un créneau n'est proposé que s'il se termine avant l'heure de fermeture.
+ * `club` : réglages en vigueur (horaires et fermetures modifiables par le gérant).
  */
-export function getSlotsForDate(dateStr: string, now: ClubNow = getClubNow()): string[] {
-  const { open, close } = getOpeningRange();
-  const duration = clubConfig.slotDurationMinutes || 90;
-  const booked = new Set(clubConfig.bookedSlots ?? []);
+export function getSlotsForDate(dateStr: string, now: ClubNow = getClubNow(), club: ClubConfig = defaultClub): string[] {
+  if (club.closedDates?.includes(dateStr)) return [];
+  const { open, close } = getOpeningRange(club);
+  const duration = club.slotDurationMinutes || 90;
+  const booked = new Set(club.bookedSlots ?? []);
   const isToday = dateStr === now.dateStr;
   // Arrondi à 10 min : le serveur et le client ne rendent pas à la milliseconde
   // près, cet arrondi garantit qu'ils calculent la même liste.

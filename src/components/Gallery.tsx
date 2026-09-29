@@ -1,6 +1,6 @@
 import WordReveal from '@/components/WordReveal';
 import Image from 'next/image';
-import clubConfig from '@/config/club.config';
+import defaultClub, { type ClubConfig } from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 
 const InstagramIcon = ({ className }: { className?: string }) => (
@@ -11,8 +11,11 @@ const InstagramIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export default function Gallery({ locale }: { locale: string }) {
+export default function Gallery({ locale, club = defaultClub }: { locale: string; club?: ClubConfig }) {
+  // Réglages en vigueur (onglet « Mon club » du gérant), par défaut ceux du dépôt.
+  const clubConfig = club;
   const t = getDictionary(locale);
+  const label: Record<string, string> = { fr: '03 / LA VIE DU CLUB', en: '03 / CLUB LIFE', es: '03 / LA VIDA DEL CLUB', ar: '03 / حياة النادي' };
   /**
    * Grille éditoriale à rangées fixes : chaque photo reçoit un cadre adapté à
    * son format d'origine (paysage large, portraits hauts) au lieu d'être
@@ -43,12 +46,16 @@ export default function Gallery({ locale }: { locale: string }) {
     <section id="gallery" className="section bg-sand">
       <div className="mx-auto max-w-7xl px-6">
 
+        <div className="mb-10 flex items-center gap-5 border-b border-[#1e1b14]/15 pb-5 font-mono text-xs uppercase tracking-[0.18em] t-muted" data-reveal>
+          <span className="text-[#87641a]">{label[locale] || label.fr}</span><span className="h-px flex-1 bg-[#1e1b14]/12" aria-hidden /><span>{String(curatedImages.length).padStart(2, '0')}</span>
+        </div>
+
         <div className="mb-12 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
           <div>
             <span className="eyebrow" data-reveal>{t.sections.galleryEyebrow}</span>
             <WordReveal
               as="h2"
-              className="mt-4 font-display text-3xl font-semibold t-title sm:text-[2.6rem]"
+              className="mt-4 block font-display text-[clamp(2.8rem,5.3vw,5.5rem)] font-semibold leading-[1.02] tracking-[-0.045em] t-title"
               parts={[
                 t.sections.galleryTitle,
                 { text: t.sections.galleryTitleAccent, className: 'italic t-gold' },

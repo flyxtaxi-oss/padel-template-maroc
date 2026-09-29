@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
-import clubConfig from '@/config/club.config';
+import defaultClub, { type ClubConfig } from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import Link from 'next/link';
 import LogoMark from '@/components/LogoMark';
@@ -22,7 +22,9 @@ const MENU_LABEL: Record<string, { open: string; close: string }> = {
 // `solid` : header opaque dès le chargement. Indispensable sur les pages sans
 // hero sombre (mentions légales, confidentialité) — sinon le texte clair du
 // header s'affiche sur le fond ivoire de la page et devient illisible.
-export default function Header({ locale, solid = false }: { locale: string; solid?: boolean }) {
+export default function Header({ locale, solid = false, club = defaultClub }: { locale: string; solid?: boolean; club?: ClubConfig }) {
+  // Réglages en vigueur (onglet « Mon club » du gérant), par défaut ceux du dépôt.
+  const clubConfig = club;
   const t = getDictionary(locale);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);

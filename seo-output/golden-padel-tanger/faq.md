@@ -2,54 +2,54 @@
 
 ## French (FR)
 1. **Où se trouve Golden Padel Club à Tanger ?**
-   Juste à côté du Marjane Route de Rabat, Tanger, Maroc. Emplacement facilement accessible avec parking gratuit.
+   Près du Marjane Route de Rabat, Tanger, Maroc.
 2. **Comment réserver un terrain de padel à Tanger ?**
-   Via notre site web en remplissant le formulaire de réservation en ligne ou directement par message WhatsApp au +212600000000.
+   Via le formulaire du site ou par WhatsApp au +212664851592. Le club confirme ensuite la demande.
 3. **Quel est le tarif de location d'un terrain chez Golden Padel Tanger ?**
-   Le tarif est de 240 MAD pour une session de 90 minutes de jeu.
+   Le tarif est de 400 MAD pour 90 minutes de jeu à quatre personnes, soit 100 MAD par personne si le prix est partagé également.
 4. **Peut-on louer des raquettes et acheter des balles sur place ?**
-   Oui, la location de raquette est disponible à 30 MAD par partie, et des balles de qualité sont en vente à notre pro-shop.
+   La location d'une raquette coûte 20 MAD en supplément. Contactez le club pour les autres équipements.
 5. **Quels sont les horaires d'ouverture de Golden Padel Club Tanger ?**
    Nous sommes ouverts tous les jours (7j/7), jours fériés inclus, de 09:00 à minuit (00:00).
 6. **Combien de terrains possède le club et sont-ils couverts ?**
    Le club dispose de 4 terrains indoor (intérieurs) haut de gamme avec moquette de type Mondo Supercourt pour éviter les intempéries et le vent.
 7. **Y a-t-il des douches et des vestiaires disponibles ?**
-   Oui, des vestiaires complets et parfaitement entretenus avec douches chaudes et casiers sécurisés sont à votre disposition.
+   Contactez le club pour confirmer les équipements disponibles lors de votre visite.
 8. **Organisez-vous des tournois et des entraînements de padel à Tanger ?**
-   Oui, nous organisons régulièrement des tournois homologués, des ligues amicales et des séances de coaching individuel ou en groupe.
+   Contactez le club pour connaître le programme actuel des cours et événements.
 
 ## Arabic (AR)
 1. **أين يقع نادي جولدن بادل في طنجة؟**
-   يقع النادي بجوار مرجان طريق الرباط، طنجة، المغرب. موقع سهل الوصول مع موقف سيارات مجاني.
+   يقع النادي قرب مرجان طريق الرباط، طنجة، المغرب.
 2. **كيف يمكنني حجز ملعب بادل في طنجة؟**
-   يمكنك الحجز عبر موقعنا الإلكتروني عن طريق ملء استمارة الحجز أو مباشرة عبر رسالة واتساب على الرقم +212600000000.
+   يمكنك تقديم طلب عبر الموقع أو التواصل عبر واتساب على الرقم +212664851592. يؤكد النادي الحجز بعد ذلك.
 3. **ما هي أسعار حجز ملاعب جولدن بادل طنجة؟**
-   سعر الإيجار هو 240 درهم مغربي لحصة مدتها 90 دقيقة من اللعب.
+   سعر الملعب هو 400 درهم لمدة 90 دقيقة لأربعة أشخاص، أي 100 درهم للشخص إذا قُسّم السعر بالتساوي.
 4. **هل يمكن استئجار مضارب وشراء كرات في الموقع؟**
-   نعم، يتوفر إيجار المضرب مقابل 30 درهمًا مغربيًا للحصة، وتتوفر كرات عالية الجودة للبيع في متجرنا الخاص.
+   كراء المضرب متوفر مقابل 20 درهمًا إضافية. تواصل مع النادي بخصوص المعدات الأخرى.
 5. **ما هي أوقات عمل نادي جولدن بادل طنجة؟**
    نحن مفتوحون يومياً (7 أيام في الأسبوع)، بما في ذلك أيام العطل، من الساعة 09:00 صباحاً حتى منتصف الليل (00:00).
 6. **كم عدد ملاعب النادي وهل هي مغطاة؟**
    يحتوي النادي على 4 ملاعب داخلية (مغطاة) عالية الجودة مع عشب Mondo Supercourt لتجنب الرياح والأمطار.
 7. **هل تتوفر غرف تغيير الملابس وحمامات؟**
-   نعم، تتوفر غرف تغيير ملابس كاملة ونظيفة ومجهزة بدش ساخن وخزائن آمنة.
+   تواصل مع النادي للتأكد من المرافق المتاحة أثناء زيارتك.
 8. **هل تنظمون دوريات وحصص تدريب بادل في طنجة؟**
-   نعم، ننظم بانتظام دوريات رسمية، وبطولات ودية، وحصص تدريبية فردية وجماعية مع مدربين مؤهلين.
+   تواصل مع النادي لمعرفة البرنامج الحالي للدروس والفعاليات.
 
 ## Spanish (ES)
 1. **¿Dónde está Golden Padel Club en Tánger?**
-   Justo al lado de Marjane Route de Rabat, Tánger, Marruecos. Ubicación de fácil acceso con aparcamiento gratuito.
+   Cerca de Marjane Route de Rabat, Tánger, Marruecos.
 2. **¿Cómo reservar una pista de pádel en Tánger?**
-   A través de nuestro sitio web rellenando el formulario de reserva en línea o directamente por WhatsApp en el +212600000000.
+   A través del formulario del sitio o por WhatsApp al +212664851592. El club confirma la solicitud después.
 3. **¿Cuál es el precio de alquiler de una pista en Golden Padel Tánger?**
-   El precio es de 240 MAD para una sesión de 90 minutos de juego.
+   El precio es de 400 MAD por 90 minutos para cuatro personas, es decir, 100 MAD por persona si se comparte el importe.
 4. **¿Se pueden alquilar palas y comprar bolas en el club?**
-   Sí, el alquiler de pala está disponible por 30 MAD por partido, y vendemos pelotas de calidad en nuestra tienda pro-shop.
+   El alquiler de una pala cuesta 20 MAD adicionales. Consulta con el club sobre otros equipos.
 5. **¿Cuáles son las horas de apertura de Golden Padel Club Tánger?**
    Estamos abiertos todos los días (7j/7), festivos incluidos, de 09:00 a medianoche (00:00).
 6. **¿Cuántas pistas tiene el club y son cubiertas?**
    El club dispone de 4 pistas indoor (cubiertas) de última generación con césped Mondo Supercourt para protegerse del viento y lluvia.
 7. **¿Hay duchas y vestuarios disponibles en el club?**
-   Sí, disponemos de vestuarios completos con duchas de agua caliente y taquillas de seguridad a su disposición.
+   Consulta con el club para confirmar las instalaciones disponibles durante tu visita.
 8. **¿Organizan torneos y clases de pádel en Tánger?**
-   Sí, organizamos regularmente torneos homologados, ligas amistosas y entrenamientos de pádel individuales o en grupo.
+   Consulta con el club el programa actual de clases y eventos.

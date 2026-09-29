@@ -1,4 +1,4 @@
-import clubConfig from '@/config/club.config';
+import clubConfig, { type ClubConfig } from '@/config/club.config';
 import { getClubNow, addDaysStr, getSlotsForDate } from '@/lib/schedule';
 
 /**
@@ -24,10 +24,10 @@ export function ledgerId(date: string, time: string): string {
 }
 
 /** Vrai si le créneau existe, n'est pas passé et reste dans la fenêtre de réservation. */
-export function isBookableSlot(date: string, time: string): boolean {
+export function isBookableSlot(date: string, time: string, club: ClubConfig = clubConfig): boolean {
   const now = getClubNow();
   if (date < now.dateStr || date > addDaysStr(now.dateStr, BOOKING_WINDOW_DAYS - 1)) return false;
-  return getSlotsForDate(date, now).includes(time);
+  return getSlotsForDate(date, now, club).includes(time);
 }
 
 /** Plus petit numéro de terrain libre, ou `null` si le créneau est complet. */

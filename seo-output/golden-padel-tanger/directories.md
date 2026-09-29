@@ -4,7 +4,7 @@
 ```text
 Name: Golden Padel Club
 Address: Marjane Route de Rabat, Tanger, 90000, Maroc
-Phone: +212600000000
+Phone: +212664851592
 Website: https://padel-one-xi.vercel.app
 ```
 

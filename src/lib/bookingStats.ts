@@ -1,4 +1,4 @@
-import clubConfig from '@/config/club.config';
+import clubConfig, { type ClubConfig } from '@/config/club.config';
 import { getSlotsForDate, addDaysStr, type ClubNow } from '@/lib/schedule';
 
 /**
@@ -22,13 +22,15 @@ export type StatBooking = {
   level?: string;
   status?: string;
   created_at?: string;
+  /** Tarif appliqué au moment de la réservation : un changement de prix ne réécrit pas le passé. */
+  price_mad?: number;
 };
 
 /** Une réservation refusée ne compte ni dans l'occupation ni dans les revenus. */
 export const isActive = (b: StatBooking) => (b.status ?? 'pending') !== 'declined';
 
 export const COURTS = clubConfig.courts.map((_, i) => i + 1);
-export const PRICE_MAD = clubConfig.pricing[0]?.price ?? 240;
+export const PRICE_MAD = clubConfig.pricing[0]?.price ?? 400;
 
 // `getSlotsForDate` retire les créneaux déjà passés quand la date est
 // aujourd'hui. Pour mesurer une capacité (« combien de créneaux ce jour
@@ -36,9 +38,9 @@ export const PRICE_MAD = clubConfig.pricing[0]?.price ?? 240;
 // « aujourd'hui », donc aucun créneau n'est retiré.
 const FULL_DAY: ClubNow = { dateStr: '', minutes: 0 };
 
-/** Tous les créneaux d'une journée, passés compris. */
-export function slotsOfDay(date: string): string[] {
-  return getSlotsForDate(date, FULL_DAY);
+/** Tous les créneaux d'une journée, passés compris. `club` : horaires en vigueur. */
+export function slotsOfDay(date: string, club: ClubConfig = clubConfig): string[] {
+  return getSlotsForDate(date, FULL_DAY, club);
 }
 
 /**
@@ -52,18 +54,19 @@ export function occupancy(
   bookings: StatBooking[],
   startDate: string,
   days: number,
+  club: ClubConfig = clubConfig,
 ): { rate: number; booked: number; capacity: number } {
   const dates = Array.from({ length: days }, (_, i) => addDaysStr(startDate, i));
   const inRange = new Set(dates);
-  const capacity = dates.reduce((sum, d) => sum + slotsOfDay(d).length * COURTS.length, 0);
+  const capacity = dates.reduce((sum, d) => sum + slotsOfDay(d, club).length * COURTS.length, 0);
   const booked = bookings.filter((b) => isActive(b) && b.date && inRange.has(b.date)).length;
   return { rate: capacity > 0 ? booked / capacity : 0, booked, capacity };
 }
 
 /** Réservations par créneau horaire, dans l'ordre de la journée. */
-export function peakHours(bookings: StatBooking[]): Array<{ time: string; count: number }> {
+export function peakHours(bookings: StatBooking[], club: ClubConfig = clubConfig): Array<{ time: string; count: number }> {
   const counts = new Map<string, number>();
-  for (const t of slotsOfDay('2026-01-01')) counts.set(t, 0);
+  for (const t of slotsOfDay('2026-01-01', { ...club, closedDates: [] })) counts.set(t, 0);
   for (const b of bookings) {
     if (!isActive(b) || !b.time_slot) continue;
     counts.set(b.time_slot, (counts.get(b.time_slot) ?? 0) + 1);
@@ -108,8 +111,9 @@ export type PlanningRow = { court: number; cells: PlanningCell[] };
 export function dayPlanning(
   bookings: StatBooking[],
   date: string,
+  club: ClubConfig = clubConfig,
 ): { slots: string[]; rows: PlanningRow[]; unassigned: StatBooking[] } {
-  const slots = slotsOfDay(date);
+  const slots = slotsOfDay(date, club);
   const ofDay = bookings.filter((b) => isActive(b) && b.date === date);
 
   const placed = new Map<string, StatBooking>();
@@ -127,9 +131,15 @@ export function dayPlanning(
   return { slots, rows, unassigned };
 }
 
-/** Revenus d'un mois ('yyyy-MM'), au tarif d'un créneau. */
-export function revenueOfMonth(bookings: StatBooking[], month: string): number {
-  return bookings.filter((b) => isActive(b) && b.date?.startsWith(month)).length * PRICE_MAD;
+/**
+ * Revenus d'un mois ('yyyy-MM'). Chaque réservation compte au tarif enregistré
+ * avec elle (`price_mad`) ; à défaut (anciennes réservations), au tarif actuel.
+ */
+export function revenueOfMonth(bookings: StatBooking[], month: string, club: ClubConfig = clubConfig): number {
+  const current = club.pricing[0]?.price ?? PRICE_MAD;
+  return bookings
+    .filter((b) => isActive(b) && b.date?.startsWith(month))
+    .reduce((sum, b) => sum + (typeof b.price_mad === 'number' ? b.price_mad : current), 0);
 }
 
 /** Export tableur : le gérant ouvre ses réservations dans Excel. */

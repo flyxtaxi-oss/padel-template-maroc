@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import clubConfig from '@/config/club.config';
+import { getClub } from '@/lib/clubSettings.server';
 import { SITE_URL } from '@/lib/site';
 
 export async function GET() {
+  // Ce que les IA lisent doit refléter les réglages du gérant (prix, horaires…).
+  const clubConfig = await getClub();
   const defaultLocale = clubConfig.defaultLocale;
   
   const content = `

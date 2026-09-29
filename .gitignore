@@ -49,3 +49,12 @@ firebase-debug.log
 
 # Captures et journaux du navigateur de test
 .playwright-mcp/
+
+# Vidéos brutes générées par scripts/higgsfield.mjs (avant sélection et encodage)
+/.higgsfield/
+
+# Réglages « Mon club » en développement local (sans Firebase)
+/.data/
+
+# Livrables client (propositions, PDF) : confidentiels, dépôt public
+/output/

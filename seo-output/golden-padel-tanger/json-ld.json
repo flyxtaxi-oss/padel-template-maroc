@@ -9,7 +9,7 @@
       "https://padel-one-xi.vercel.app/clubs/golden/2.jpg"
     ],
     "priceRange": "$$",
-    "telephone": "+212600000000",
+    "telephone": "+212664851592",
     "address": {
       "@type": "PostalAddress",
       "streetAddress": "Marjane Route de Rabat",
@@ -59,7 +59,7 @@
         "name": "Comment réserver un terrain de padel à Tanger ?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Vous pouvez réserver votre terrain en ligne sur notre site web (sauvegardé via Firebase) ou en envoyant un message WhatsApp au +212600000000 pour une confirmation rapide."
+          "text": "Vous pouvez demander un créneau sur notre site ou contacter le club sur WhatsApp au +212664851592. Le club confirme ensuite la réservation."
         }
       },
       {
@@ -67,7 +67,7 @@
         "name": "Quel est le prix pour louer un terrain ?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Le tarif de location de terrain est de 240 MAD pour une session de 90 minutes. La location de raquette est à 30 MAD par partie."
+          "text": "Le terrain coûte 400 MAD pour 90 minutes à quatre personnes. La location d'une raquette coûte 20 MAD en supplément."
         }
       }
     ]

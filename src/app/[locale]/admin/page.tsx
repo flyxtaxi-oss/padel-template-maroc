@@ -5,7 +5,9 @@ import { useParams } from 'next/navigation';
 import { format, parseISO, isValid, subDays, addDays } from 'date-fns';
 import { getBookings, saveBooking, type StoredBooking, getFeedbacks, saveFeedback, type StoredFeedback, updateLocalBookingStatus, type BookingStatus } from '@/lib/demoStore';
 import { buildClientReplyUrl } from '@/lib/bookingDelivery';
-import clubConfig from '@/config/club.config';
+import clubConfig, { type ClubConfig } from '@/config/club.config';
+import ClubSettingsPanel from '@/components/admin/ClubSettingsPanel';
+import ManualBookingDialog from '@/components/admin/ManualBookingDialog';
 import { SITE_URL } from '@/lib/site';
 import { useNow } from '@/lib/useNow';
 import {
@@ -16,24 +18,14 @@ import { motion } from 'framer-motion';
 import {
   Lock, Phone, MessageCircle, RefreshCw, CalendarDays, LogOut, CloudOff, Cloud, Check, X, Clock, Undo2,
   Eye, Banknote, TrendingUp, Globe, Search, Zap, Sparkles, QrCode as QrIcon, Bell, Star,
-  LayoutGrid, Users, Download, BarChart3, Repeat,
+  LayoutGrid, Users, Download, BarChart3, Repeat, CalendarPlus, Settings2,
 } from 'lucide-react';
 
-// Code d'accès. Surchargeable via NEXT_PUBLIC_ADMIN_CODE dans .env.local /
-// les variables d'environnement Vercel.
-//
-// ⚠️ Ce code est un garde-fou, PAS une authentification : étant préfixé
-// NEXT_PUBLIC_, il est présent dans le bundle client et reste lisible par
-// quelqu'un qui inspecte le JavaScript. Il empêche l'accès accidentel
-// (visiteur, client, moteur de recherche), pas un accès déterminé.
-// Pour une vraie protection : Firebase Auth ou Vercel Password Protection.
-const DEFAULT_ADMIN_CODE = 'golden2026';
-const ADMIN_CODE = process.env.NEXT_PUBLIC_ADMIN_CODE || DEFAULT_ADMIN_CODE;
-
-// Vrai tant que NEXT_PUBLIC_ADMIN_CODE n'est pas défini : le code par défaut est
-// alors public (il est écrit en clair dans le bundle JavaScript). Un bandeau
-// l'affiche dans le tableau de bord pour qu'on ne puisse pas livrer sans le voir.
-const USING_DEFAULT_CODE = !process.env.NEXT_PUBLIC_ADMIN_CODE;
+// Accès : le code gérant n'existe QUE côté serveur (`ADMIN_CODE`). Cette page
+// ne le connaît pas : elle l'envoie à /api/admin/session, qui pose un cookie de
+// session httpOnly de 30 jours (voir src/lib/adminAuth.ts). L'ancien
+// `NEXT_PUBLIC_ADMIN_CODE` rendait le code lisible dans le JavaScript public —
+// et, avec lui, les téléphones de tous les clients via l'API.
 
 type Booking = {
   id: string;
@@ -190,6 +182,21 @@ export default function AdminPage() {
 
   const [code, setCode] = useState('');
   const [authed, setAuthed] = useState(false);
+  // `checking` : vérification de session au chargement — ni écran de
+  // connexion ni tableau de bord tant que le serveur n'a pas répondu.
+  const [checking, setChecking] = useState(true);
+  // Vrai quand ADMIN_CODE est configuré : l'accès passe par une session.
+  // Faux en démonstration (aucun code serveur) : données locales uniquement.
+  const [sessionMode, setSessionMode] = useState(false);
+  const [weakCode, setWeakCode] = useState(false);
+  const authedRef = useRef(false);
+  // Vue principale : l'activité du club, ou « Mon club » (réglages du site).
+  const [view, setView] = useState<'dashboard' | 'club'>('dashboard');
+  // Config en vigueur (tarifs, horaires…) : les statistiques et le planning
+  // doivent suivre ce que le gérant a réglé, pas les valeurs du dépôt.
+  const [club, setClub] = useState<ClubConfig>(clubConfig);
+  const [showManual, setShowManual] = useState(false);
+  const [flash, setFlash] = useState('');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [feedbacks, setFeedbacks] = useState<StoredFeedback[]>([]);
   const [activeTab, setActiveTab] = useState<'bookings' | 'feedbacks'>('bookings');
@@ -212,15 +219,22 @@ export default function AdminPage() {
   // source affiche le même statut, 30 s au plus.
   const statusOverrides = useRef(new Map<string, { status: BookingStatus; at: number }>());
 
-  const load = useCallback(async (accessCode: string, silent = false) => {
+  // Session perdue (expirée, code changé sur Vercel, déconnexion ailleurs) :
+  // retour à l'écran de connexion, sans laisser de données à l'écran.
+  const dropSession = useCallback((message: string) => {
+    authedRef.current = false;
+    setAuthed(false);
+    setBookings([]);
+    setFeedbacks([]);
+    setError(message);
+  }, []);
+
+  const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     setError('');
 
-    // L'authentification est tranchée par le SERVEUR quand il est configuré :
-    // c'est le seul contrôle réel, `NEXT_PUBLIC_ADMIN_CODE` étant lisible dans
-    // le bundle. Le code client ne sert que de repli en mode démo, sinon un
-    // ADMIN_CODE serveur différent du code public rendrait la connexion
-    // impossible.
+    // L'authentification est tranchée par le SERVEUR, sur le cookie de
+    // session : la page ne détient aucun code.
 
     // Source distante : UNIQUEMENT via /api/admin/bookings. Une lecture
     // Firestore depuis le navigateur serait refusée par firestore.rules
@@ -234,7 +248,6 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: accessCode }),
         signal: AbortSignal.timeout(8000),
       });
 
@@ -244,22 +257,15 @@ export default function AdminPage() {
         remoteFeedbacks = (data.feedbacks ?? []) as StoredFeedback[];
         mode = 'remote';
       } else if (res.status === 401) {
-        // Le serveur fait autorité : code refusé, on s'arrête là.
-        setError('Code incorrect');
+        // Pas (ou plus) de session valide : le serveur fait autorité.
+        dropSession(authedRef.current ? 'Session expirée — reconnectez-vous.' : '');
         setLoading(false);
         return;
       } else {
         const data = await res.json().catch(() => ({}));
-        // Nuance décisive : un 503 `no_service_account` signifie que le serveur
-        // a DÉJÀ validé le code (il n'échoue que sur Firebase). Le revalider
-        // contre le code public interdirait la connexion dès que les deux
-        // diffèrent. On ne retombe sur le contrôle local que lorsque le serveur
-        // n'a pas pu authentifier du tout (`no_admin_code`).
-        if (data.reason !== 'no_service_account' && ADMIN_CODE && accessCode !== ADMIN_CODE) {
-          setError('Code incorrect');
-          setLoading(false);
-          return;
-        }
+        // 503 `no_service_account` : la session a DÉJÀ été validée (le serveur
+        // ne vérifie Firebase qu'après). 503 `no_admin_code` : démonstration,
+        // aucun code serveur — seules les données de ce navigateur s'affichent.
         const base =
           data.reason === 'no_service_account'
             ? 'La clé de service Firebase (FIREBASE_SERVICE_ACCOUNT) n’est pas utilisable sur le serveur.'
@@ -270,9 +276,11 @@ export default function AdminPage() {
         reason = data.detail ? `${base} ${data.detail}` : base;
       }
     } catch {
-      // Serveur injoignable (hors ligne, timeout) : même repli local.
-      if (ADMIN_CODE && accessCode !== ADMIN_CODE) {
-        setError('Code incorrect');
+      // Serveur injoignable (hors ligne, timeout). Sans lui, impossible de
+      // vérifier une session : on n'ouvre rien. Un gérant déjà connecté garde
+      // en revanche son écran, avec les données de cet appareil.
+      if (!authedRef.current) {
+        setError('Serveur injoignable — vérifiez la connexion puis réessayez.');
         setLoading(false);
         return;
       }
@@ -311,6 +319,7 @@ export default function AdminPage() {
 
     setBookings(merged);
     setFeedbacks(mergedFeedbacks);
+    authedRef.current = true;
     setAuthed(true);
     setLoading(false);
 
@@ -321,7 +330,7 @@ export default function AdminPage() {
     return `${merged.length}:${mergedFeedbacks.length}:${merged[0]?.created_at ?? ''}:${merged
       .map((b) => statusOf(b))
       .join('')}`;
-  }, []);
+  }, [dropSession]);
 
   // Confirmer / refuser une demande. Mise à jour optimiste de l'écran, puis
   // persistance : API serveur en mode synchronisé, stockage local sinon. Si le
@@ -338,9 +347,14 @@ export default function AdminPage() {
         const res = await fetch('/api/admin/bookings', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, id, status }),
+          body: JSON.stringify({ id, status }),
           signal: AbortSignal.timeout(8000),
         });
+        if (res.status === 401) {
+          statusOverrides.current.delete(id);
+          dropSession('Session expirée — reconnectez-vous, puis refaites la modification.');
+          return;
+        }
         persisted = res.ok;
       } catch {
         persisted = false;
@@ -351,22 +365,84 @@ export default function AdminPage() {
     if (!persisted && dataMode === 'remote') {
       setError('Statut enregistré sur cet appareil seulement — synchronisation impossible pour le moment.');
     }
-  }, [dataMode, code]);
+  }, [dataMode, dropSession]);
 
   // Horloge : source externe, lue via useSyncExternalStore pour ne pas rendre
   // le rendu impur (`new Date()` en plein render est interdit par React 19).
   const nowMs = useNow(60_000);
   const now = useMemo(() => (nowMs ? new Date(nowMs) : null), [nowMs]);
 
-  // Accès direct si aucun code n'est configuré.
+  // Au chargement : session encore valide → tableau de bord directement (le
+  // gérant ne retape pas son code pendant 30 jours) ; démonstration → accès
+  // direct aux données locales ; sinon → écran de connexion.
   useEffect(() => {
-    if (ADMIN_CODE) return;
-    // « Fetch on mount » assumé : `load` est asynchrone et les états qu'elle
-    // pose viennent de la réponse, pas d'une cascade de rendus. La règle
-    // set-state-in-effect ne distingue pas ce cas légitime du vrai anti-pattern.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load('');
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/session', { cache: 'no-store', signal: AbortSignal.timeout(8000) });
+        const s = (await res.json()) as { authed?: boolean; configured?: boolean; weakCode?: boolean };
+        if (cancelled) return;
+        setSessionMode(Boolean(s.configured));
+        setWeakCode(Boolean(s.weakCode));
+        if (s.authed || !s.configured) await load();
+      } catch {
+        if (!cancelled) setError('Serveur injoignable — vérifiez la connexion puis réessayez.');
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [load]);
+
+  useEffect(() => {
+    if (!authed) return;
+    let cancelled = false;
+    fetch('/api/admin/settings', { cache: 'no-store', signal: AbortSignal.timeout(8000) })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && d?.club) setClub(d.club as ClubConfig); })
+      .catch(() => { /* valeurs du dépôt en attendant */ });
+    return () => { cancelled = true; };
+  }, [authed]);
+
+  // Message de confirmation éphémère (réservation saisie, réglages enregistrés).
+  useEffect(() => {
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(''), 6000);
+    return () => clearTimeout(t);
+  }, [flash]);
+
+  const login = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code || loading) return;
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        setCode('');
+        await load();
+        return;
+      }
+      const data = (await res.json().catch(() => ({}))) as { minutes?: number; reason?: string };
+      if (res.status === 429) {
+        setError(`Trop d’essais. Réessayez dans ${data.minutes ?? 15} min.`);
+      } else if (res.status === 503 && data.reason === 'no_admin_code') {
+        setSessionMode(false);
+        await load();
+        return;
+      } else {
+        setError(res.status === 401 ? 'Code incorrect' : 'Connexion impossible pour le moment.');
+      }
+    } catch {
+      setError('Serveur injoignable — vérifiez la connexion puis réessayez.');
+    }
+    setLoading(false);
+  };
 
   /**
    * Rafraîchissement en direct — et sobre en lectures Firestore.
@@ -414,7 +490,7 @@ export default function AdminPage() {
         document.visibilityState === 'visible' && Date.now() - lastActivity <= IDLE_AFTER;
 
       if (awake) {
-        const sig = await load(code, true);
+        const sig = await load(true);
         if (sig !== undefined) {
           if (sig === signature) {
             quiet += 1;
@@ -469,7 +545,7 @@ export default function AdminPage() {
         window.removeEventListener(ev, onActivity);
       }
     };
-  }, [authed, code, load]);
+  }, [authed, load]);
 
   const stats = useMemo(() => {
     const ref = now ?? new Date(0);
@@ -481,7 +557,7 @@ export default function AdminPage() {
 
     // Mesures réelles : elles valent autant en démo qu'en production, et ce
     // sont elles qui font vivre le tableau de bord une fois Firebase branché.
-    const occ = occupancy(bookings, t, 7);
+    const occ = occupancy(bookings, t, 7, club);
     const clientList = clients(bookings);
     const recurring = clientList.filter((c) => c.visits > 1).length;
 
@@ -490,15 +566,15 @@ export default function AdminPage() {
       pending,
       today: active.filter((b) => b.date === t).length,
       upcoming: active.filter((b) => (b.date || '') >= t).length,
-      revenue: active.length * PRICE_MAD,
-      revenueMonth: revenueOfMonth(bookings, t.slice(0, 7)),
+      revenue: active.length * (club.pricing[0]?.price ?? PRICE_MAD),
+      revenueMonth: revenueOfMonth(bookings, t.slice(0, 7), club),
       occupancy: occ,
       clientList,
       recurring,
       visitors30,
       conversion: total > 0 ? Math.min(12, (total / visitors30) * 100 + 2.4) : 2.4,
     };
-  }, [bookings, now]);
+  }, [bookings, now, club]);
 
   // Planning : aujourd'hui par défaut, demain d'un clic (le gérant prépare sa soirée).
   const [planningOffset, setPlanningOffset] = useState(0);
@@ -507,11 +583,11 @@ export default function AdminPage() {
     [now, planningOffset],
   );
   const planning = useMemo(
-    () => (planningDate ? dayPlanning(bookings, planningDate) : null),
-    [bookings, planningDate],
+    () => (planningDate ? dayPlanning(bookings, planningDate, club) : null),
+    [bookings, planningDate, club],
   );
 
-  const peaks = useMemo(() => peakHours(bookings), [bookings]);
+  const peaks = useMemo(() => peakHours(bookings, club), [bookings, club]);
   const peakMax = Math.max(1, ...peaks.map((p) => p.count));
 
   // Export tableur : fichier construit dans le navigateur, rien n'est envoyé.
@@ -548,30 +624,39 @@ export default function AdminPage() {
     ? nowMs - new Date(latest.created_at).getTime() < 3 * 60 * 1000
     : false;
 
-  const logout = () => { setAuthed(false); setBookings([]); setCode(''); };
+  const logout = async () => {
+    try {
+      await fetch('/api/admin/session', { method: 'DELETE', signal: AbortSignal.timeout(8000) });
+    } catch {
+      // Hors ligne : l'écran se ferme quand même ; le cookie expirera.
+    }
+    dropSession('');
+    setCode('');
+  };
 
   const inputCls = "w-full rounded-xl border border-[#1e1b14]/12 bg-white p-3.5 text-sm text-[#1e1b14] outline-none transition-colors placeholder-[#1e1b14]/35 focus:border-gold";
 
-  // ── Écran de connexion (uniquement si un code est configuré) ──
+  // ── Écran de connexion ──
   if (!authed) {
-    if (!ADMIN_CODE) {
+    if (checking || (!sessionMode && !error)) {
       return (
         <main className="flex min-h-screen items-center justify-center bg-sand">
-          <RefreshCw className="h-6 w-6 animate-spin t-gold" />
+          <RefreshCw className="h-6 w-6 animate-spin t-gold" aria-label="Chargement" />
         </main>
       );
     }
     return (
       <main className="flex min-h-screen items-center justify-center bg-sand px-6">
-        <form onSubmit={(e) => { e.preventDefault(); load(code); }} className="card card-lift w-full max-w-sm p-8">
+        <form onSubmit={login} className="card card-lift w-full max-w-sm p-8">
           <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-gold/12">
             <Lock className="h-6 w-6 t-gold" />
           </div>
           <h1 className="font-display text-2xl font-semibold t-title">Espace gérant</h1>
           <p className="mt-1.5 text-sm t-muted">Golden Padel Club — réservations</p>
-          <label className="mt-7 mb-2 block text-xs font-medium t-muted">Code d’accès</label>
-          <input type="password" value={code} onChange={(e) => setCode(e.target.value)} placeholder="••••••••" autoFocus className={inputCls} />
-          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+          <label htmlFor="admin-code" className="mt-7 mb-2 block text-xs font-medium t-muted">Code d’accès</label>
+          <input id="admin-code" type="password" autoComplete="current-password" value={code} onChange={(e) => setCode(e.target.value)} placeholder="••••••••" autoFocus className={inputCls} />
+          {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
+          <p className="mt-4 text-xs t-muted">Vous restez connecté 30 jours sur cet appareil.</p>
           <button type="submit" disabled={loading} className="btn-gold mt-6 w-full py-3.5 text-sm">
             {loading ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#1a140a] border-t-transparent" /> : 'Se connecter'}
           </button>
@@ -593,7 +678,7 @@ export default function AdminPage() {
   const realKpis = [
     { label: 'Réservations', value: `${stats.total}`, icon: CalendarDays, demo: false, sub: stats.pending ? `${stats.pending} à traiter · ${stats.upcoming} à venir` : `${stats.today} aujourd'hui · ${stats.upcoming} à venir` },
     { label: 'Remplissage', value: `${Math.round(stats.occupancy.rate * 100)} %`, icon: LayoutGrid, demo: false, sub: `${stats.occupancy.booked} / ${stats.occupancy.capacity} créneaux · 7 jours à venir` },
-    { label: 'Revenus du mois', value: `${stats.revenueMonth.toLocaleString('fr-FR')} MAD`, icon: Banknote, demo: false, sub: `${PRICE_MAD} MAD / créneau 90 min` },
+    { label: 'Revenus du mois', value: `${stats.revenueMonth.toLocaleString('fr-FR')} MAD`, icon: Banknote, demo: false, sub: `${club.pricing[0]?.price ?? PRICE_MAD} MAD / créneau 90 min` },
     { label: 'Clients', value: `${stats.clientList.length}`, icon: Users, demo: false, sub: stats.recurring ? `dont ${stats.recurring} fidèle${stats.recurring > 1 ? 's' : ''} (2 venues et +)` : 'clients uniques identifiés' },
   ];
   const demoKpis = [
@@ -648,21 +733,18 @@ export default function AdminPage() {
           </div>
         )}
 
-        {USING_DEFAULT_CODE && (
+        {weakCode && (
           <div
             role="alert"
             className="mb-6 flex items-start gap-3 rounded-2xl border border-[#b98a2e]/40 bg-[#b98a2e]/10 p-4"
           >
             <Lock className="mt-0.5 h-4 w-4 shrink-0 t-gold" />
             <div className="text-sm">
-              <p className="font-semibold t-title">Code d’accès par défaut</p>
+              <p className="font-semibold t-title">Code d’accès trop court</p>
               <p className="mt-1 t-soft">
-                Cet espace utilise <code className="font-mono">{DEFAULT_ADMIN_CODE}</code>, écrit en clair dans le
-                JavaScript envoyé au navigateur : n’importe quel visiteur peut le lire. Avant de mettre le site en
-                ligne, définissez <code className="font-mono">ADMIN_CODE</code> et{' '}
-                <code className="font-mono">NEXT_PUBLIC_ADMIN_CODE</code> avec <strong>la même valeur</strong> dans les
-                variables d’environnement, puis redéployez. Le premier est le vrai contrôle (serveur) ; sans lui, le
-                tableau de bord reste en mode local. Ce bandeau disparaîtra.
+                Le code gérant fait moins de 12 caractères : il pourrait être deviné. Choisissez-en un plus long dans
+                la variable <code className="font-mono">ADMIN_CODE</code> sur Vercel, puis redéployez — toutes les
+                sessions ouvertes seront alors déconnectées.
               </p>
             </div>
           </div>
@@ -674,11 +756,15 @@ export default function AdminPage() {
               <h1 className="font-display text-2xl font-semibold t-title sm:text-3xl">Tableau de bord</h1>
               {isDemo && <span className="rounded-full bg-gold/15 px-3 py-1 text-xs font-semibold t-gold">Aperçu démo</span>}
             </div>
-            <p className="mt-1 text-sm t-muted">Golden Padel Club — vue d’ensemble en direct</p>
+            <p className="mt-1 text-sm t-muted">{club.name} — vue d’ensemble en direct</p>
           </div>
-          <div className="flex gap-2">
-            {isDemo && (
-              <button onClick={() => { seedDemoBookings(); seedDemoFeedbacks(); load(code); }} className="btn-outline px-4 py-2.5 text-sm font-medium cursor-pointer">
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => { setView('dashboard'); setShowManual(true); }} className="btn-gold px-4 py-2.5 text-sm">
+              <CalendarPlus className="h-4 w-4" />
+              Nouvelle réservation
+            </button>
+            {isDemo && view === 'dashboard' && (
+              <button onClick={() => { seedDemoBookings(); seedDemoFeedbacks(); load(); }} className="btn-outline px-4 py-2.5 text-sm font-medium cursor-pointer">
                 <Sparkles className="h-4 w-4" />
                 Données de démo
               </button>
@@ -692,18 +778,46 @@ export default function AdminPage() {
               <Download className="h-4 w-4" />
               Export
             </button>
-            <button onClick={() => load(code)} className="btn-outline px-4 py-2.5 text-sm font-medium" disabled={loading}>
+            <button onClick={() => load()} className="btn-outline px-4 py-2.5 text-sm font-medium" disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Actualiser
             </button>
-            {ADMIN_CODE && (
-              <button onClick={logout} className="btn-outline px-4 py-2.5 text-sm font-medium">
+            {sessionMode && (
+              <button onClick={logout} className="btn-outline px-4 py-2.5 text-sm font-medium" title="Se déconnecter" aria-label="Se déconnecter">
                 <LogOut className="h-4 w-4" />
               </button>
             )}
           </div>
         </div>
 
+        {/* Deux espaces : l'activité (réservations, statistiques) et « Mon club »
+            (ce que le site affiche). Même session, même mot de passe. */}
+        <nav className="mb-8 inline-flex rounded-full border hair bg-white/70 p-1" aria-label="Sections du tableau de bord">
+          {([
+            ['dashboard', 'Activité', BarChart3],
+            ['club', 'Mon club', Settings2],
+          ] as const).map(([key, label, Icon]) => (
+            <button key={key} type="button" onClick={() => setView(key)} aria-current={view === key ? 'page' : undefined}
+              className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-colors ${view === key ? 'bg-court text-cream' : 't-muted hover:t-title'}`}>
+              <Icon className="h-4 w-4" aria-hidden />
+              {label}
+            </button>
+          ))}
+        </nav>
+
+        {flash && (
+          <div role="status" className="mb-6 flex items-center gap-2 rounded-2xl border border-gold/40 bg-gold/10 p-4 text-sm t-title">
+            <Check className="h-4 w-4 shrink-0 t-gold" /> {flash}
+          </div>
+        )}
+
+        {view === 'club' ? (
+          <ClubSettingsPanel
+            locale={locale}
+            onSaved={(next) => setClub(next)}
+            onUnauthorized={() => dropSession('Session expirée — reconnectez-vous.')}
+          />
+        ) : (<>
         {/* KPIs */}
         <div className={`mb-6 grid grid-cols-2 gap-4 ${isDemo ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
           {kpis.map((k, i) => {
@@ -1163,8 +1277,20 @@ export default function AdminPage() {
         <p className="mt-8 text-center text-xs t-muted">
           {isDemo
             ? 'Mode démonstration : les réservations s’affichent en direct sur cet appareil. Version production : synchronisation Firebase multi-appareils.'
-            : 'Les demandes sont synchronisées entre tous les appareils. Actualisation automatique toutes les 4 secondes.'}
+            : 'Les demandes sont synchronisées entre tous les appareils. Actualisation automatique pendant que l’écran est ouvert.'}
         </p>
+        </>)}
+
+        {showManual && (
+          <ManualBookingDialog
+            club={club}
+            bookings={bookings}
+            localMode={dataMode === 'local'}
+            onClose={() => setShowManual(false)}
+            onCreated={(message) => { setShowManual(false); setFlash(message); load(true); }}
+            onUnauthorized={() => { setShowManual(false); dropSession('Session expirée — reconnectez-vous.'); }}
+          />
+        )}
 
       </div>
     </main>

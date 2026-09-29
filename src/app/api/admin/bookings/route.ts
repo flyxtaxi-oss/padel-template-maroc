@@ -2,24 +2,25 @@ import { NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import clubConfig from '@/config/club.config';
 import { LEDGER_COLLECTION, ledgerId, pickFreeCourt, readTaken } from '@/lib/slotLedger';
+import { adminCode, hasValidSession, isSameOrigin, unauthorized } from '@/lib/adminAuth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * POST /api/admin/bookings  { code }
+ * POST /api/admin/bookings
  *
  * Seul chemin de lecture des réservations et des retours clients.
  *
  * Pourquoi côté serveur : `firestore.rules` interdit toute lecture depuis un
  * navigateur (`allow read: if false`). Les numéros de téléphone des clients ne
  * doivent jamais être exposés à qui ouvre le site. L'Admin SDK contourne les
- * règles avec la clé de service, qui ne quitte jamais le serveur — et le code
- * gérant est vérifié ici, pas dans du JavaScript que n'importe qui peut lire.
+ * règles avec la clé de service, qui ne quitte jamais le serveur — et l'accès
+ * exige la session ouverte par /api/admin/session (cookie httpOnly signé).
  *
  * Réponses :
  *  - 200 { bookings, feedbacks }        lecture distante réussie
- *  - 401 { error }                      code incorrect
+ *  - 401 { error, reason: 'no_session' } pas de session valide
  *  - 503 { error, reason }              backend non configuré — le tableau de
  *                                       bord bascule en mode local et le dit.
  */
@@ -31,22 +32,11 @@ function unconfigured(reason: Unconfigured, error: string, detail?: string) {
 }
 
 export async function POST(req: Request) {
-  const expected = process.env.ADMIN_CODE;
-  if (!expected) {
+  if (!adminCode()) {
     return unconfigured('no_admin_code', 'ADMIN_CODE non configuré côté serveur');
   }
-
-  let code = '';
-  try {
-    const body = await req.json();
-    code = typeof body?.code === 'string' ? body.code : '';
-  } catch {
-    code = '';
-  }
-
-  if (code !== expected) {
-    return NextResponse.json({ error: 'Code incorrect' }, { status: 401 });
-  }
+  if (!isSameOrigin(req)) return NextResponse.json({ error: 'Origine refusée' }, { status: 403 });
+  if (!hasValidSession(req)) return unauthorized();
 
   const admin = getAdminFirestore();
   if ('error' in admin) {
@@ -83,7 +73,7 @@ export async function POST(req: Request) {
       readCollection<{ id: string; club_slug?: string }>('booking_requests', 150),
       readCollection<{ id: string; club_slug?: string }>('feedbacks', 50),
     ]);
-    return NextResponse.json({ bookings, feedbacks });
+    return NextResponse.json({ bookings, feedbacks }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (err) {
     console.error('admin read error', err);
     return NextResponse.json({ error: 'Lecture impossible' }, { status: 500 });
@@ -91,27 +81,28 @@ export async function POST(req: Request) {
 }
 
 /**
- * PATCH /api/admin/bookings  { code, id, status }
+ * PATCH /api/admin/bookings  { id, status }
  *
- * Le gérant confirme ou refuse une demande. Même garde que POST : code vérifié
- * ici, écriture via l'Admin SDK (les règles Firestore interdisent toute
+ * Le gérant confirme ou refuse une demande. Même garde que POST : session
+ * vérifiée ici, écriture via l'Admin SDK (les règles Firestore interdisent toute
  * modification depuis un navigateur).
  */
 const STATUSES = new Set(['pending', 'confirmed', 'declined']);
 
 export async function PATCH(req: Request) {
-  const expected = process.env.ADMIN_CODE;
-  if (!expected) return unconfigured('no_admin_code', 'ADMIN_CODE non configuré côté serveur');
+  if (!adminCode()) return unconfigured('no_admin_code', 'ADMIN_CODE non configuré côté serveur');
+  if (!isSameOrigin(req)) return NextResponse.json({ error: 'Origine refusée' }, { status: 403 });
+  if (!hasValidSession(req)) return unauthorized();
 
-  let body: { code?: unknown; id?: unknown; status?: unknown } = {};
+  let body: { id?: unknown; status?: unknown } = {};
   try {
     body = await req.json();
   } catch {
     body = {};
   }
-  if (body.code !== expected) return NextResponse.json({ error: 'Code incorrect' }, { status: 401 });
 
-  const id = typeof body.id === 'string' ? body.id : '';
+  // Identifiant Firestore uniquement : un « / » ferait viser un autre document.
+  const id = typeof body.id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(body.id) ? body.id : '';
   const status = typeof body.status === 'string' ? body.status : '';
   if (!id || !STATUSES.has(status)) {
     return NextResponse.json({ error: 'Paramètres invalides' }, { status: 400 });

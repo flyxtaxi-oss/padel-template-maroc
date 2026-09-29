@@ -25,6 +25,7 @@ export default function SmoothScroll() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (window.matchMedia('(pointer: coarse)').matches) return;
 
     let destroy: (() => void) | undefined;
     let cancelled = false;

@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og';
-import clubConfig from '@/config/club.config';
+import defaultClub from '@/config/club.config';
+import { getClub } from '@/lib/clubSettings.server';
 import { getOpeningRange } from '@/lib/schedule';
 
 /**
@@ -14,10 +15,10 @@ import { getOpeningRange } from '@/lib/schedule';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
-export const alt = `${clubConfig.name} — ${clubConfig.tagline[clubConfig.defaultLocale]}`;
+export const alt = `${defaultClub.name} — ${defaultClub.tagline[defaultClub.defaultLocale]}`;
 
 export function generateStaticParams() {
-  return clubConfig.locales.map((locale) => ({ locale }));
+  return defaultClub.locales.map((locale) => ({ locale }));
 }
 
 const COURT = '#0d2c4f';
@@ -26,13 +27,19 @@ const GOLD = '#d9b25a';
 const CREAM = '#fbf8f1';
 
 export default async function OpengraphImage({ params }: { params: Promise<{ locale: string }> }) {
+  // Prix et horaires de l'aperçu WhatsApp : ceux réglés par le gérant.
+  const clubConfig = await getClub();
   const { locale } = await params;
   const lang = clubConfig.locales.includes(locale) ? locale : clubConfig.defaultLocale;
 
-  const { open } = getOpeningRange();
+  const { open } = getOpeningRange(clubConfig);
   const hh = (m: number) => `${Math.floor(m / 60) % 24}h`;
-  const price = clubConfig.pricing[0]?.price ?? 240;
-  const duration = clubConfig.pricing[0]?.duration ?? '90 min';
+  const price = clubConfig.pricing[0]?.price ?? 400;
+  const duration: Record<string, string> = {
+    fr: `${clubConfig.slotDurationMinutes} min · 4 joueurs`,
+    en: `${clubConfig.slotDurationMinutes} min · 4 players`,
+    es: `${clubConfig.slotDurationMinutes} min · 4 jugadores`,
+  };
 
   // L'arabe reprend la ligne anglaise, en écriture latine. La police fournie
   // par `next/og` ne sait pas façonner l'arabe (ligatures contextuelles) et
@@ -40,9 +47,9 @@ export default async function OpengraphImage({ params }: { params: Promise<{ loc
   // complète pour trois mots d'une image d'aperçu ne le vaut pas : le nom du
   // club est de toute façon latin, et la page arabe, elle, est bien en arabe.
   const facts: Record<string, string[]> = {
-    fr: [`${clubConfig.courts.length} terrains indoor`, `7j/7 · ${hh(open)}–minuit`, `${price} MAD / ${duration}`],
-    en: [`${clubConfig.courts.length} indoor courts`, `Open daily · ${hh(open)}–midnight`, `${price} MAD / ${duration}`],
-    es: [`${clubConfig.courts.length} pistas cubiertas`, `Todos los días · ${hh(open)}–medianoche`, `${price} MAD / ${duration}`],
+    fr: [`${clubConfig.courts.length} terrains indoor`, `7j/7 · ${hh(open)}–minuit`, `${price} MAD / ${duration.fr}`],
+    en: [`${clubConfig.courts.length} indoor courts`, `Open daily · ${hh(open)}–midnight`, `${price} MAD / ${duration.en}`],
+    es: [`${clubConfig.courts.length} pistas cubiertas`, `Todos los días · ${hh(open)}–medianoche`, `${price} MAD / ${duration.es}`],
   };
   const line = facts[lang] ?? facts.en;
 

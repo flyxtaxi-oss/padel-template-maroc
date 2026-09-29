@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import clubConfig from '@/config/club.config';
+import defaultClub, { type ClubConfig } from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import { format, parseISO } from 'date-fns';
 import type { Locale } from 'date-fns';
@@ -22,6 +22,8 @@ type LiveCopy = {
   free: (n: number) => string;
   full: string;
   taken: string;
+  /** Refus du serveur : trop de créneaux à venir pour ce numéro, ou trop d'essais. */
+  limit: string;
   instantTitle: string;
   instantMessage: (court: number, day: string, time: string) => string;
   instantNote: string;
@@ -35,6 +37,7 @@ const LIVE_COPY: Record<string, LiveCopy> = {
     free: (n) => (n > 1 ? `${n} terrains libres` : '1 terrain libre'),
     full: 'Complet',
     taken: 'Ce créneau vient d’être réservé par quelqu’un d’autre. Choisissez-en un autre.',
+    limit: 'Vous avez déjà plusieurs créneaux à venir avec ce numéro. Pour en réserver davantage, contactez le club sur WhatsApp.',
     instantTitle: 'Réservation confirmée',
     instantMessage: (court, day, time) => `Terrain ${court} réservé pour vous le ${day} à ${time}. Paiement sur place — arrivez 10 minutes avant.`,
     instantNote: 'Un empêchement ? Prévenez le club sur WhatsApp pour libérer le terrain.',
@@ -45,6 +48,7 @@ const LIVE_COPY: Record<string, LiveCopy> = {
     free: (n) => (n > 1 ? `${n} courts free` : '1 court free'),
     full: 'Full',
     taken: 'Someone just booked this slot. Please pick another one.',
+    limit: 'You already have several upcoming slots with this number. To book more, contact the club on WhatsApp.',
     instantTitle: 'Booking confirmed',
     instantMessage: (court, day, time) => `Court ${court} is yours on ${day} at ${time}. Pay at the club — please arrive 10 minutes early.`,
     instantNote: 'Can’t make it? Let the club know on WhatsApp so the court can be freed.',
@@ -55,6 +59,7 @@ const LIVE_COPY: Record<string, LiveCopy> = {
     free: (n) => (n > 1 ? `${n} pistas libres` : '1 pista libre'),
     full: 'Completo',
     taken: 'Alguien acaba de reservar esta franja. Elige otra, por favor.',
+    limit: 'Ya tienes varias reservas próximas con este número. Para reservar más, contacta con el club por WhatsApp.',
     instantTitle: 'Reserva confirmada',
     instantMessage: (court, day, time) => `Pista ${court} reservada para ti el ${day} a las ${time}. Pago en el club — llega 10 minutos antes.`,
     instantNote: '¿Un imprevisto? Avisa al club por WhatsApp para liberar la pista.',
@@ -65,6 +70,7 @@ const LIVE_COPY: Record<string, LiveCopy> = {
     free: (n) => (n > 1 ? `${n} ملاعب متاحة` : 'ملعب واحد متاح'),
     full: 'محجوز بالكامل',
     taken: 'تم حجز هذا التوقيت للتو من طرف شخص آخر. اختر توقيتًا آخر من فضلك.',
+    limit: 'لديك بالفعل عدة حجوزات قادمة بهذا الرقم. لحجز المزيد، تواصل مع النادي عبر واتساب.',
     instantTitle: 'تم تأكيد الحجز',
     instantMessage: (court, day, time) => `الملعب ${court} محجوز لك يوم ${day} على الساعة ${time}. الأداء في النادي — يرجى الحضور قبل 10 دقائق.`,
     instantNote: 'طرأ مانع؟ أخبر النادي عبر واتساب لتحرير الملعب.',
@@ -72,7 +78,9 @@ const LIVE_COPY: Record<string, LiveCopy> = {
   },
 };
 
-export default function BookingWidget({ locale }: { locale: string }) {
+export default function BookingWidget({ locale, club = defaultClub }: { locale: string; club?: ClubConfig }) {
+  // Réglages en vigueur (onglet « Mon club » du gérant), par défaut ceux du dépôt.
+  const clubConfig = club;
   const t = getDictionary(locale);
   const L = LIVE_COPY[locale] || LIVE_COPY.fr;
   const dateLocale = dateLocales[locale] || frLocale;
@@ -91,8 +99,8 @@ export default function BookingWidget({ locale }: { locale: string }) {
   // premier jour qui a réellement de la disponibilité (le soir, « aujourd'hui »
   // est vide — on ne veut pas accueillir le visiteur sur une section vide).
   const slotsByDay = useMemo(
-    () => Object.fromEntries(upcomingDays.map((d) => [d, getSlotsForDate(d, clubNow)])),
-    [upcomingDays, clubNow],
+    () => Object.fromEntries(upcomingDays.map((d) => [d, getSlotsForDate(d, clubNow, clubConfig)])),
+    [upcomingDays, clubNow, clubConfig],
   );
 
   const [selectedDate, setSelectedDate] = useState<string>(
@@ -120,6 +128,7 @@ export default function BookingWidget({ locale }: { locale: string }) {
   const [live, setLive] = useState<Live | null>(null);
   const [instantCourt, setInstantCourt] = useState<number | null>(null);
   const [slotTaken, setSlotTaken] = useState(false);
+  const [limitHit, setLimitHit] = useState(false);
 
   const { bookingMode, reservation } = clubConfig;
 
@@ -177,6 +186,7 @@ export default function BookingWidget({ locale }: { locale: string }) {
     if (!selectedSlot) return;
     setIsSubmitting(true);
     setSlotTaken(false);
+    setLimitHit(false);
 
     const booking: StoredBooking = {
       id: `b_${Date.now()}`,
@@ -214,6 +224,13 @@ export default function BookingWidget({ locale }: { locale: string }) {
           setIsSuccess(true);
           setIsSubmitting(false);
           refreshLive();
+          return;
+        }
+        // Refus volontaire (plafond par numéro, abus) : on le dit, sans
+        // retomber sur une demande manuelle qui contournerait la limite.
+        if (res.status === 429) {
+          setLimitHit(true);
+          setIsSubmitting(false);
           return;
         }
         if (res.status === 409) {
@@ -306,15 +323,21 @@ export default function BookingWidget({ locale }: { locale: string }) {
                 : delivered ? t.booking.successMessage : t.booking.sendMessage}
             </p>
 
-            {sent && !instantCourt && (
+            {/* WhatsApp n'apparaît QUE si la demande n'a pas quitté l'appareil
+                (aucun backend) : c'est alors le seul moyen qu'elle arrive au
+                club. Une fois la demande reçue, un second bouton « confirmer
+                plus vite sur WhatsApp » contredisait l'écran (« demande
+                envoyée ») et faisait croire au client qu'elle ne suffisait pas —
+                tout en créant un doublon chez le gérant. */}
+            {sent && !instantCourt && !delivered && (
               <a
-                href={buildWhatsAppUrl(sent, locale)}
+                href={buildWhatsAppUrl(sent, locale, clubConfig.reservation.value)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`mt-8 px-8 py-4 text-sm ${delivered ? 'btn-outline' : 'btn-gold'}`}
+                className="btn-gold mt-8 px-8 py-4 text-sm"
               >
                 <MessageCircle className="h-4 w-4" />
-                {delivered ? t.booking.alsoWhatsApp : t.booking.sendViaWhatsApp}
+                {t.booking.sendViaWhatsApp}
               </a>
             )}
 
@@ -374,9 +397,9 @@ export default function BookingWidget({ locale }: { locale: string }) {
 
             <div className="mb-9">
               <h3 className={stepLabel}><span className={stepNumber}>2</span>{t.booking.selectTime}</h3>
-              {slotTaken && (
+              {(slotTaken || limitHit) && (
                 <p role="alert" className="mt-4 rounded-xl border border-[#c0392b]/30 bg-[#c0392b]/8 p-3 text-sm t-title">
-                  {L.taken}
+                  {limitHit ? L.limit : L.taken}
                 </p>
               )}
               {slotsForSelectedDate.length === 0 ? (
@@ -423,7 +446,7 @@ export default function BookingWidget({ locale }: { locale: string }) {
                   <div>
                     <label htmlFor="bk-name" className="mb-2 block text-xs font-medium t-muted">{t.sections.fieldName}</label>
                     <div className="relative">
-                      <input id="bk-name" required type="text" autoComplete="name" value={name} onChange={e => setName(e.target.value)} placeholder="Ex : Yassine Belghiti" className={inputBase} />
+                      <input id="bk-name" required maxLength={100} type="text" autoComplete="name" value={name} onChange={e => setName(e.target.value)} placeholder="Ex : Yassine Belghiti" className={inputBase} />
                       <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1e1b14]/35" />
                     </div>
                   </div>
@@ -431,7 +454,7 @@ export default function BookingWidget({ locale }: { locale: string }) {
                   <div>
                     <label htmlFor="bk-phone" className="mb-2 block text-xs font-medium t-muted">{t.sections.fieldPhone}</label>
                     <div className="relative">
-                      <input id="bk-phone" required type="tel" autoComplete="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Ex : +212612345678" className={inputBase} />
+                      <input id="bk-phone" required maxLength={25} type="tel" autoComplete="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Ex : +212612345678" className={inputBase} />
                       <Phone className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1e1b14]/35" />
                     </div>
                   </div>
@@ -439,7 +462,7 @@ export default function BookingWidget({ locale }: { locale: string }) {
                   <div>
                     <label htmlFor="bk-level" className="mb-2 block text-xs font-medium t-muted">{t.sections.fieldLevel}</label>
                     <div className="relative">
-                      <input id="bk-level" required type="text" value={level} onChange={e => setLevel(e.target.value)} placeholder="Ex : Intermédiaire (niveau 3)" className={inputBase} />
+                      <input id="bk-level" required maxLength={50} type="text" value={level} onChange={e => setLevel(e.target.value)} placeholder="Ex : Intermédiaire (niveau 3)" className={inputBase} />
                       <Trophy className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1e1b14]/35" />
                     </div>
                   </div>

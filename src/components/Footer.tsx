@@ -1,4 +1,4 @@
-import clubConfig from '@/config/club.config';
+import defaultClub, { type ClubConfig } from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import Link from 'next/link';
 import LogoMark from '@/components/LogoMark';
@@ -12,7 +12,9 @@ const InstagramIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export default function Footer({ locale }: { locale: string }) {
+export default function Footer({ locale, club = defaultClub }: { locale: string; club?: ClubConfig }) {
+  // Réglages en vigueur (onglet « Mon club » du gérant), par défaut ceux du dépôt.
+  const clubConfig = club;
   const { name, contact, locales } = clubConfig;
   const currentYear = new Date().getFullYear();
   const t = getDictionary(locale);
@@ -96,6 +98,11 @@ export default function Footer({ locale }: { locale: string }) {
           <div className="flex gap-6">
             <Link href={`/${locale}/mentions-legales`} className="text-xs t-muted transition-colors hover:t-title">{t.footer.legal}</Link>
             <Link href={`/${locale}/confidentialite`} className="text-xs t-muted transition-colors hover:t-title">{t.footer.privacy}</Link>
+            {/* Accès gérant : discret, en pied de page, jamais dans le menu — un
+                bouton « Connexion » en haut ferait croire aux joueurs qu'il faut
+                un compte pour réserver. `nofollow` : la page est déjà exclue de
+                l'index (robots + noindex). La protection, elle, est côté serveur. */}
+            <Link href={`/${locale}/admin`} rel="nofollow" className="text-xs t-muted transition-colors hover:t-title">{t.footer.staff}</Link>
           </div>
         </div>
       </div>

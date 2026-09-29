@@ -85,6 +85,8 @@ export type ClubConfig = {
   courts: Court[];
   pricing: Pricing[];
   openingHours: OpeningHours;
+  /** Fermetures exceptionnelles ('yyyy-MM-dd') : aucun créneau ces jours-là. Modifiable par le gérant. */
+  closedDates?: string[];
   gallery: string[];
   googleReviews: Review[];
   /** Place ID de la fiche Google du club. Renseigné → lien « écrire un avis » direct. */
@@ -165,12 +167,12 @@ const goldenConfig: ClubConfig = {
   pricing: [
     { 
       label: { fr: 'Location Terrain (90 min)', en: 'Court rental (90 min)', ar: 'إيجار ملعب (90 دقيقة)', es: 'Alquiler Pista (90 min)' },
-      price: 240, 
-      duration: '90 min' 
+      price: 400,
+      duration: '90 min · 4 personnes'
     },
     { 
       label: { fr: 'Location Raquette', en: 'Racket rental', ar: 'تأجير مضرب', es: 'Alquiler Pala' },
-      price: 30, 
+      price: 20,
       duration: 'partie' 
     },
   ],
@@ -251,10 +253,10 @@ const goldenConfig: ClubConfig = {
     {
       question: { fr: 'Combien coûte la location d\'un terrain ?', en: 'How much does a court cost?', ar: 'كم يكلف كراء ملعب؟', es: '¿Cuánto cuesta alquilar una pista?' },
       answer: {
-        fr: 'La location d\'un terrain coûte 240 MAD pour 90 minutes, quel que soit le nombre de joueurs. La location d\'une raquette est à 30 MAD la partie.',
-        en: 'A court costs 240 MAD for 90 minutes, whatever the number of players. Racket rental is 30 MAD per game.',
-        ar: 'كراء الملعب 240 درهمًا لمدة 90 دقيقة، مهما كان عدد اللاعبين. كراء المضرب 30 درهمًا للمباراة.',
-        es: 'Una pista cuesta 240 MAD por 90 minutos, sea cual sea el número de jugadores. El alquiler de pala cuesta 30 MAD por partido.'
+        fr: 'La location d\'un terrain coûte 400 MAD pour 90 minutes pour 4 personnes. La location d\'une raquette est à 20 MAD par partie.',
+        en: 'A court costs 400 MAD for 90 minutes for 4 people. Racket rental is 20 MAD per game.',
+        ar: 'كراء الملعب يكلف 400 درهم لمدة 90 دقيقة لأربعة أشخاص. كراء المضرب 20 درهمًا للمباراة.',
+        es: 'Una pista cuesta 400 MAD por 90 minutos para 4 personas. El alquiler de pala cuesta 20 MAD por partido.'
       }
     },
     {
@@ -287,10 +289,10 @@ const goldenConfig: ClubConfig = {
     {
       question: { fr: 'Puis-je louer une raquette sur place ?', en: 'Can I rent a racket at the club?', ar: 'هل يمكنني كراء مضرب في النادي؟', es: '¿Puedo alquilar una pala en el club?' },
       answer: {
-        fr: 'Oui, des raquettes sont disponibles à la location pour 30 MAD la partie. Prévenez-nous à la réservation pour que nous en gardions le nombre nécessaire.',
-        en: 'Yes, rackets are available to rent for 30 MAD per game. Let us know when booking so we can set aside the number you need.',
-        ar: 'نعم، تتوفر مضارب للكراء بـ 30 درهمًا للمباراة. أخبرنا عند الحجز لنحتفظ لك بالعدد المطلوب.',
-        es: 'Sí, hay palas de alquiler por 30 MAD por partido. Avísanos al reservar para reservarte las que necesites.'
+        fr: 'Oui, des raquettes sont disponibles à la location pour 20 MAD la partie. Prévenez-nous à la réservation pour que nous en gardions le nombre nécessaire.',
+        en: 'Yes, rackets are available to rent for 20 MAD per game. Let us know when booking so we can set aside the number you need.',
+        ar: 'نعم، تتوفر مضارب للكراء بـ 20 درهمًا للمباراة. أخبرنا عند الحجز لنحتفظ لك بالعدد المطلوب.',
+        es: 'Sí, hay palas de alquiler por 20 MAD por partido. Avísanos al reservar para reservarte las que necesites.'
       }
     },
     {

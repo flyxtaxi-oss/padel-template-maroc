@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import SkipLink from '@/components/SkipLink';
 import { SITE_URL } from '@/lib/site';
-import clubConfig from '@/config/club.config';
+import { getClub } from '@/lib/clubSettings.server';
 import { notFound } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -9,6 +9,8 @@ import { format, parseISO } from 'date-fns';
 import { Calendar, Trophy, MapPin } from 'lucide-react';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string; slug: string }> }): Promise<Metadata> {
+  // Les tournois sont saisis par le gérant dans « Mon club ».
+  const clubConfig = await getClub();
   const { locale, slug } = await params;
   const event = clubConfig.events?.find((e) => e.id === slug);
   if (!event) return {};
@@ -40,6 +42,7 @@ export default async function EventPage({
 }: { 
   params: Promise<{ locale: string, slug: string }> 
 }) {
+  const clubConfig = await getClub();
   const resolvedParams = await params;
   const { locale, slug } = resolvedParams;
   

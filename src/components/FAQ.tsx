@@ -1,15 +1,20 @@
 import WordReveal from '@/components/WordReveal';
-import clubConfig from '@/config/club.config';
+import defaultClub, { type ClubConfig } from '@/config/club.config';
 import { getDictionary } from '@/i18n/dictionaries';
 import { ChevronDown } from 'lucide-react';
 
-export default function FAQ({ locale }: { locale: string }) {
+export default function FAQ({ locale, club = defaultClub }: { locale: string; club?: ClubConfig }) {
+  // Réglages en vigueur (onglet « Mon club » du gérant), par défaut ceux du dépôt.
+  const clubConfig = club;
   const t = getDictionary(locale);
   const { faq } = clubConfig;
   if (!faq || faq.length === 0) return null;
 
   return (
-    <section id="faq" className="section bg-cream">
+    // Alternance des fonds (DESIGN.md) : Galerie ivoire → Tournois crème →
+    // FAQ ivoire. Sans tournoi, la FAQ passe en crème pour ne pas fusionner
+    // avec la Galerie. Automatique : le gérant ajoute un tournoi, le rythme suit.
+    <section id="faq" className={`section ${clubConfig.events?.length ? 'bg-sand' : 'bg-cream'}`}>
       <div className="mx-auto max-w-3xl px-6">
         <div className="mb-12 text-center">
           <span className="eyebrow" data-reveal>{t.sections.faqEyebrow}</span>

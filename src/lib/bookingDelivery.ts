@@ -57,8 +57,8 @@ export function buildWhatsAppMessage(booking: BookingDraft, locale: string): str
 }
 
 /** Lien wa.me prêt à ouvrir, vers le numéro de réservation du club. */
-export function buildWhatsAppUrl(booking: BookingDraft, locale: string): string {
-  const digits = clubConfig.reservation.value.replace(/[^0-9]/g, '');
+export function buildWhatsAppUrl(booking: BookingDraft, locale: string, reservationNumber: string = clubConfig.reservation.value): string {
+  const digits = reservationNumber.replace(/[^0-9]/g, '');
   return `https://wa.me/${digits}?text=${encodeURIComponent(buildWhatsAppMessage(booking, locale))}`;
 }
 

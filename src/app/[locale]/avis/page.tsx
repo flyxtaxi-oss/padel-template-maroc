@@ -352,6 +352,7 @@ export default function AvisPage({ params }: { params: Promise<{ locale: string 
                   <div>
                     <textarea
                       required
+                      maxLength={1500}
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
                       placeholder={t.review?.commentPlaceholder || 'Saisissez vos remarques ou suggestions...'}
@@ -367,6 +368,7 @@ export default function AvisPage({ params }: { params: Promise<{ locale: string 
                       </label>
                       <input
                         type="text"
+                        maxLength={100}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Ex: Ahmed"
@@ -379,6 +381,7 @@ export default function AvisPage({ params }: { params: Promise<{ locale: string 
                       </label>
                       <input
                         type="tel"
+                        maxLength={25}
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="Ex: 06 00 00 00 00"

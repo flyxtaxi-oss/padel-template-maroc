@@ -29,13 +29,13 @@ export type Dictionary = {
     sendMessage: string;
     /** Libellé du bouton WhatsApp. */
     sendViaWhatsApp: string;
-    /** Proposition WhatsApp quand la demande est déjà partie côté serveur. */
-    alsoWhatsApp: string;
   };
   footer: {
     rights: string;
     legal: string;
     privacy: string;
+    /** Lien discret vers l'espace gérant (pied de page). */
+    staff: string;
   };
   ui: {
     indoorCourts: string;
@@ -141,12 +141,12 @@ const dictionaries: Record<string, Dictionary> = {
       sendTitle: 'Dernière étape',
       sendMessage: 'Votre demande est prête. Envoyez-la au club via WhatsApp pour qu’il la reçoive et vous confirme le créneau.',
       sendViaWhatsApp: 'Envoyer au club sur WhatsApp',
-      alsoWhatsApp: 'Confirmer plus vite sur WhatsApp',
     },
     footer: {
       rights: 'Tous droits réservés.',
       legal: 'Mentions légales',
       privacy: 'Confidentialité',
+      staff: 'Espace club',
     },
     ui: {
       indoorCourts: 'Terrains indoor',
@@ -172,7 +172,7 @@ const dictionaries: Record<string, Dictionary> = {
       bookingSubtitle: 'Choisissez une date et un créneau — le club vous confirme rapidement.',
       bookingStep3: 'Compléter la réservation',
       bookingSuccessTitle: 'Demande envoyée',
-      bookingSuccessNote: 'Le club vous recontacte rapidement pour confirmer.',
+      bookingSuccessNote: 'Le club vous confirme le créneau sur WhatsApp, au numéro indiqué. Vous n’avez rien d’autre à faire.',
       fieldName: 'Nom complet',
       fieldPhone: 'Numéro de téléphone',
       fieldLevel: 'Votre niveau',
@@ -246,12 +246,12 @@ const dictionaries: Record<string, Dictionary> = {
       sendTitle: 'One last step',
       sendMessage: 'Your request is ready. Send it to the club on WhatsApp so they receive it and confirm your slot.',
       sendViaWhatsApp: 'Send to the club on WhatsApp',
-      alsoWhatsApp: 'Confirm faster on WhatsApp',
     },
     footer: {
       rights: 'All rights reserved.',
       legal: 'Legal notice',
       privacy: 'Privacy',
+      staff: 'Club area',
     },
     ui: {
       indoorCourts: 'Indoor courts',
@@ -277,7 +277,7 @@ const dictionaries: Record<string, Dictionary> = {
       bookingSubtitle: 'Pick a date and a time slot — the club confirms shortly after.',
       bookingStep3: 'Complete your booking',
       bookingSuccessTitle: 'Request sent',
-      bookingSuccessNote: 'The club will get back to you shortly to confirm.',
+      bookingSuccessNote: 'The club will confirm your slot on WhatsApp, at the number you gave. Nothing else to do.',
       fieldName: 'Full name',
       fieldPhone: 'Phone number',
       fieldLevel: 'Your level',
@@ -351,12 +351,12 @@ const dictionaries: Record<string, Dictionary> = {
       sendTitle: 'Último paso',
       sendMessage: 'Tu solicitud está lista. Envíala al club por WhatsApp para que la reciba y te confirme la pista.',
       sendViaWhatsApp: 'Enviar al club por WhatsApp',
-      alsoWhatsApp: 'Confirmar más rápido por WhatsApp',
     },
     footer: {
       rights: 'Todos los derechos reservados.',
       legal: 'Aviso legal',
       privacy: 'Privacidad',
+      staff: 'Área del club',
     },
     ui: {
       indoorCourts: 'Pistas cubiertas',
@@ -382,7 +382,7 @@ const dictionaries: Record<string, Dictionary> = {
       bookingSubtitle: 'Elige una fecha y un horario — el club te confirma enseguida.',
       bookingStep3: 'Completar la reserva',
       bookingSuccessTitle: 'Solicitud enviada',
-      bookingSuccessNote: 'El club se pondrá en contacto contigo para confirmar.',
+      bookingSuccessNote: 'El club te confirmará la pista por WhatsApp, en el número indicado. No tienes que hacer nada más.',
       fieldName: 'Nombre completo',
       fieldPhone: 'Número de teléfono',
       fieldLevel: 'Tu nivel',
@@ -456,12 +456,12 @@ const dictionaries: Record<string, Dictionary> = {
       sendTitle: 'الخطوة الأخيرة',
       sendMessage: 'طلبك جاهز. أرسله إلى النادي عبر واتساب حتى يستقبله ويؤكد لك الحجز.',
       sendViaWhatsApp: 'أرسل إلى النادي عبر واتساب',
-      alsoWhatsApp: 'التأكيد بشكل أسرع عبر واتساب',
     },
     footer: {
       rights: 'جميع الحقوق محفوظة.',
       legal: 'شروط قانونية',
       privacy: 'سياسة الخصوصية',
+      staff: 'فضاء النادي',
     },
     ui: {
       indoorCourts: 'ملاعب داخلية',
@@ -487,7 +487,7 @@ const dictionaries: Record<string, Dictionary> = {
       bookingSubtitle: 'اختر التاريخ والوقت — سيؤكد لك النادي الحجز بسرعة.',
       bookingStep3: 'إتمام الحجز',
       bookingSuccessTitle: 'تم إرسال الطلب',
-      bookingSuccessNote: 'سيتصل بك النادي قريبًا للتأكيد.',
+      bookingSuccessNote: 'سيؤكد لك النادي الموعد عبر واتساب على الرقم الذي أدخلته. لا حاجة لأي خطوة أخرى.',
       fieldName: 'الاسم الكامل',
       fieldPhone: 'رقم الهاتف',
       fieldLevel: 'مستواك',

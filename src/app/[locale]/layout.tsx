@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 import "../globals.css";
-import clubConfig from "@/config/club.config";
+import { getClub } from "@/lib/clubSettings.server";
 import { SITE_URL } from "@/lib/site";
 import { getOpeningRange } from "@/lib/schedule";
 import { metaDescription, metaTitle } from "@/lib/seo";
@@ -32,11 +32,13 @@ const mono = JetBrains_Mono({
 });
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  // Réglages du gérant (tarifs, horaires, textes) : aussi dans les résultats Google.
+  const clubConfig = await getClub();
   const resolvedParams = await params;
   const locale = clubConfig.locales.includes(resolvedParams.locale) ? resolvedParams.locale : clubConfig.defaultLocale;
   
-  const title = metaTitle(locale);
-  const description = metaDescription(locale);
+  const title = metaTitle(locale, clubConfig);
+  const description = metaDescription(locale, clubConfig);
   
   const languages = clubConfig.locales.reduce((acc, loc) => {
     acc[loc] = `/${loc}`;
@@ -83,6 +85,7 @@ export default async function RootLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }>) {
+  const clubConfig = await getClub();
   const resolvedParams = await params;
   // Un segment inconnu (`/inexistant.xml`, `/wp-login.php`…) tombait ici en
   // « fr » et servait la page d'accueil en 200 : soft-404, contenu dupliqué
@@ -94,7 +97,7 @@ export default async function RootLayout({
   // Horaires : schema.org attend des jours en anglais, pas la clé française
   // « Tous les jours » (qui était invalide et ignorée par Google).
   const ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  const { open, close } = getOpeningRange();
+  const { open, close } = getOpeningRange(clubConfig);
   const fmt = (mins: number) => `${String(Math.floor(mins / 60) % 24).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
 
   const prices = clubConfig.pricing.map((p) => p.price);
@@ -146,16 +149,10 @@ export default async function RootLayout({
         paymentAccepted: "Cash",
         // Langues parlées par l'équipe, telles qu'annoncées dans la FAQ.
         knowsLanguage: ["ar", "fr", "en"],
-        // Équipements affichés sur la page « Terrains & tarifs ». Une IA qui
-        // répond « est-ce qu'il y a un parking / des douches ? » lit ceci.
+        // Ne publier que les équipements confirmés dans la fiche du club.
         amenityFeature: [
           ["Terrains indoor", true],
-          ["Climatisation", true],
-          ["Éclairage LED", true],
-          ["Vidéosurveillance", true],
-          ["Douches & vestiaires", true],
-          ["Pro-shop", true],
-          ["Parking privé gratuit", true],
+          ["Surface Mondo Supercourt", true],
         ].map(([name, value]) => ({
           "@type": "LocationFeatureSpecification",
           name,

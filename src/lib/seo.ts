@@ -1,4 +1,4 @@
-import clubConfig from '@/config/club.config';
+import defaultClub, { type ClubConfig } from '@/config/club.config';
 import { getOpeningRange } from '@/lib/schedule';
 
 /**
@@ -19,8 +19,8 @@ const CLOSING_LABEL: Record<string, string> = {
   ar: 'منتصف الليل',
 };
 
-function hours(locale: string): { open: string; close: string } {
-  const { open, close } = getOpeningRange();
+function hours(locale: string, club: ClubConfig): { open: string; close: string } {
+  const { open, close } = getOpeningRange(club);
   // Chaque langue écrit l'heure à sa façon : « 9h » en français, « 9am » en
   // anglais, « 9:00 » en espagnol et en arabe. Servir « 9h » à un anglophone
   // (ce que faisait la première version) trahit une traduction bâclée dans le
@@ -43,15 +43,11 @@ function hours(locale: string): { open: string; close: string } {
   };
 }
 
-export function metaDescription(locale: string): string {
+export function metaDescription(locale: string, clubConfig: ClubConfig = defaultClub): string {
   const courts = clubConfig.courts.length;
-  const price = clubConfig.pricing[0]?.price ?? 240;
-  const rawDuration = clubConfig.pricing[0]?.duration ?? '90 min';
-  // « 90 min » ne se lit pas en arabe : on traduit l'unité, en gardant le
-  // chiffre tel qu'il est configuré.
-  const duration =
-    locale === 'ar' ? rawDuration.replace(/min/i, 'دقيقة') : rawDuration;
-  const { open, close } = hours(locale);
+  const price = clubConfig.pricing[0]?.price ?? 400;
+  const duration = `${clubConfig.slotDurationMinutes} ${locale === 'ar' ? 'دقيقة لأربعة أشخاص' : locale === 'en' ? 'minutes for four players' : locale === 'es' ? 'minutos para cuatro jugadores' : 'minutes pour quatre joueurs'}`;
+  const { open, close } = hours(locale, clubConfig);
 
   switch (locale) {
     case 'en':
@@ -70,7 +66,7 @@ export function metaDescription(locale: string): string {
  * on ajoute l'activité et la ville, les deux mots que les gens tapent
  * réellement (« padel Tanger »).
  */
-export function metaTitle(locale: string): string {
+export function metaTitle(locale: string, clubConfig: ClubConfig = defaultClub): string {
   const tagline = clubConfig.tagline[locale] || clubConfig.tagline[clubConfig.defaultLocale];
   return `${clubConfig.name} — ${tagline}`;
 }

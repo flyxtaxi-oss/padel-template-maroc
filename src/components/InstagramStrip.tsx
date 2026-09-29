@@ -1,4 +1,4 @@
-import clubConfig from '@/config/club.config';
+import defaultClub, { type ClubConfig } from '@/config/club.config';
 import { ArrowRight } from 'lucide-react';
 
 // Vidéos du club via le lecteur officiel d'Instagram (iframe /embed) : rien
@@ -26,7 +26,9 @@ function reelId(value: string): string {
   return match ? match[1] : value.replace(/[^A-Za-z0-9_-]/g, '');
 }
 
-export default function InstagramStrip({ locale }: { locale: string }) {
+export default function InstagramStrip({ locale, club = defaultClub }: { locale: string; club?: ClubConfig }) {
+  // Réglages en vigueur (onglet « Mon club » du gérant), par défaut ceux du dépôt.
+  const clubConfig = club;
   const c = COPY[locale] || COPY.fr;
   const { instagram } = clubConfig.contact;
   const handle = instagram.split('/').filter(Boolean).pop() ?? '';

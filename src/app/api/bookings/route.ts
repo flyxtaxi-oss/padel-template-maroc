@@ -4,8 +4,10 @@ import clubConfig from '@/config/club.config';
 import { getClubNow, addDaysStr, getSlotsForDate } from '@/lib/schedule';
 import {
   LEDGER_COLLECTION, COURT_COUNT, BOOKING_WINDOW_DAYS,
-  ledgerId, isBookableSlot, pickFreeCourt, readTaken,
+  ledgerId, isBookableSlot, readTaken,
 } from '@/lib/slotLedger';
+import { getClub } from '@/lib/clubSettings.server';
+import { reserveSlot } from '@/lib/bookingService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,8 +30,10 @@ export async function GET(req: Request) {
   const requested = Number(new URL(req.url).searchParams.get('days'));
   const days = Math.min(BOOKING_WINDOW_DAYS, Math.max(1, Number.isFinite(requested) && requested > 0 ? requested : 7));
   const now = getClubNow();
+  // Horaires et fermetures en vigueur (réglables par le gérant).
+  const club = await getClub();
   const pairs = Array.from({ length: days }, (_, i) => addDaysStr(now.dateStr, i))
-    .flatMap((date) => getSlotsForDate(date, now).map((time) => ({ date, time })));
+    .flatMap((date) => getSlotsForDate(date, now, club).map((time) => ({ date, time })));
 
   if (pairs.length === 0) {
     return NextResponse.json({ courts: COURT_COUNT, taken: {} }, { headers: NO_STORE });
@@ -65,6 +69,10 @@ function rateLimited(ip: string): boolean {
 
 const LOCALES = new Set(['fr', 'en', 'es', 'ar']);
 
+// Plafond par numéro de téléphone : voir src/lib/bookingService.ts. La limite
+// par IP ci-dessus ne tient pas entre instances serverless ; celle par numéro
+// vit dans Firestore et s'applique dans la transaction même.
+
 /**
  * POST /api/bookings  { name, phone, level, players, date, time_slot, locale }
  *
@@ -73,7 +81,7 @@ const LOCALES = new Set(['fr', 'en', 'es', 'ar']);
  *  - 201 { id, court }
  *  - 400 { error: 'invalid' }
  *  - 409 { error: 'slot_full' | 'slot_unavailable' }
- *  - 429 { error: 'rate_limited' }
+ *  - 429 { error: 'rate_limited' | 'too_many_for_phone' }
  *  - 503 { error: 'unavailable' }   Firebase non configuré
  */
 export async function POST(req: Request) {
@@ -119,49 +127,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid' }, { status: 400 });
   }
 
-  if (!isBookableSlot(date, time)) {
+  const club = await getClub();
+  if (!isBookableSlot(date, time, club)) {
     return NextResponse.json({ error: 'slot_unavailable' }, { status: 409 });
   }
 
-  const { db } = admin;
-  const ledgerRef = db.collection(LEDGER_COLLECTION).doc(ledgerId(date, time));
-  const bookingRef = db.collection('booking_requests').doc();
-  const stamp = new Date().toISOString();
-
   try {
-    const court = await db.runTransaction(async (tx) => {
-      const ledger = await tx.get(ledgerRef);
-      const taken = ledger.exists ? readTaken(ledger.get('courts_taken')) : [];
-      const free = pickFreeCourt(taken);
-      if (free === null) return null;
-
-      tx.set(
-        ledgerRef,
-        { club_slug: clubConfig.slug, date, time_slot: time, courts_taken: [...taken, free], updated_at: stamp },
-        { merge: true },
-      );
-      tx.set(bookingRef, {
-        club_slug: clubConfig.slug,
-        date,
-        time_slot: time,
-        court: free,
-        name,
-        phone,
-        level,
-        players,
-        locale,
-        status: 'confirmed',
-        source: 'instant',
-        created_at: stamp,
-        status_updated_at: stamp,
-      });
-      return free;
-    });
-
-    if (court === null) {
+    const result = await reserveSlot(admin.db, club, { date, time, name, phone, level, players, locale }, 'instant');
+    if (!result.ok && result.reason === 'too_many_for_phone') {
+      return NextResponse.json({ error: 'too_many_for_phone' }, { status: 429 });
+    }
+    if (!result.ok) {
       return NextResponse.json({ error: 'slot_full' }, { status: 409 });
     }
-    return NextResponse.json({ id: bookingRef.id, court }, { status: 201 });
+    return NextResponse.json({ id: result.id, court: result.court }, { status: 201 });
   } catch (err) {
     console.error('instant booking error', err);
     return NextResponse.json({ error: 'write_failed' }, { status: 500 });

@@ -50,7 +50,7 @@ Tournois crème → FAQ ivoire → **Avis bleu** → Contact crème → **Footer
 ### Compositions signature
 | Zone | Règle |
 |------|-------|
-| Hero | **Image-first** : photo du club plein écran (`min-h-[100svh]`), voiles bleu terrain (jamais noir), titre ancré en bas, rail d'infos à filets fins en pied — pas de cartes de stats. |
+| Hero | **Éditorial** : composition bleu terrain / photo sur ordinateur, photo plein écran sur mobile, titre Golden Padel Club en Fraunces et billet tarifaire ivoire visible dès l'arrivée. Prix, durée et nombre de joueurs viennent de la config. |
 | Galerie | Grille éditoriale à rangées fixes (`auto-rows`) : chaque photo garde un cadre proche de son format (paysage large, portraits hauts). Repère `01…` en mono. |
 | Footer | Signature « Golden *Padel* » géante, crème à 7 %, rognée par le bas, `aria-hidden`. |
 
